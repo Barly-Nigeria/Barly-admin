@@ -13,7 +13,7 @@ npx prisma db seed
 npm run dev
 ```
 
-Open [http://localhost:4317](http://localhost:4317).
+Open [http://localhost:3000](http://localhost:3000).
 
 ### Demo logins
 
