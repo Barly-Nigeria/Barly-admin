@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { AppSidebar, MobileNav } from "@/components/app-sidebar";
+import { LoginScreen } from "@/components/login-screen";
 
 export default async function DashboardLayout({
   children,
@@ -8,7 +8,9 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className="flex min-h-full flex-1">
