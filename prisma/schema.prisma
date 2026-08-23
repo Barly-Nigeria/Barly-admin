@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Employee {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String
+  createdAt    DateTime @default(now())
+}
+
+model Customer {
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  age               Int
+  birthday          DateTime
+  joinedAt          DateTime  @default(now())
+  favoriteOccasion  String
+  favoritePackageId String?
+  favoritePackage   Product?  @relation("FavoritePackage", fields: [favoritePackageId], references: [id])
+  orders            Order[]
+}
+
+model Vendor {
+  id         String          @id @default(cuid())
+  name       String
+  category   String
+  balanceDue Int
+  items      Item[]
+  payments   VendorPayment[]
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  occasion    String
+  price       Int
+  status      String
+  description String
+  items       ProductItem[]
+  orders      Order[]
+  favoritedBy Customer[]    @relation("FavoritePackage")
+}
+
+model Item {
+  id         String        @id @default(cuid())
+  name       String
+  sku        String        @unique
+  cost       Int
+  sellPrice  Int
+  stock      Int
+  vendorId   String
+  vendor     Vendor        @relation(fields: [vendorId], references: [id])
+  products   ProductItem[]
+  orderLines OrderLine[]
+}
+
+model ProductItem {
+  productId String
+  itemId    String
+  quantity  Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  item      Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([productId, itemId])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  customerId  String
+  productId   String
+  status      String
+  total       Int
+  paidAt      DateTime?
+  createdAt   DateTime    @default(now())
+  notes       String      @default("")
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  product     Product     @relation(fields: [productId], references: [id])
+  lines       OrderLine[]
+  cashEntries CashEntry[]
+}
+
+model OrderLine {
+  id        String  @id @default(cuid())
+  orderId   String
+  kind      String
+  itemId    String?
+  name      String
+  quantity  Int
+  unitPrice Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item      Item?   @relation(fields: [itemId], references: [id])
+}
+
+model CashEntry {
+  id              String         @id @default(cuid())
+  type            String
+  source          String
+  amount          Int
+  note            String
+  createdAt       DateTime       @default(now())
+  orderId         String?
+  order           Order?         @relation(fields: [orderId], references: [id])
+  vendorPaymentId String?        @unique
+  vendorPayment   VendorPayment? @relation(fields: [vendorPaymentId], references: [id])
+}
+
+model VendorPayment {
+  id        String     @id @default(cuid())
+  vendorId  String
+  amount    Int
+  method    String
+  status    String
+  paidAt    DateTime   @default(now())
+  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  cashEntry CashEntry?
+}
+
+model Campaign {
+  id             String   @id @default(cuid())
+  type           String
+  subject        String
+  body           String
+  audience       String
+  sentAt         DateTime @default(now())
+  recipientCount Int
+}
