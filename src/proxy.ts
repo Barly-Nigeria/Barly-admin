@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
-import { SESSION_COOKIE, SESSION_SECRET } from "@/lib/session-constants";
+import { SESSION_COOKIE } from "@/lib/session-constants";
 
-const secret = new TextEncoder().encode(SESSION_SECRET);
+const PUBLIC = ["/login"];
 
-const PUBLIC = ["/login", "/api/auth/login"];
-
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (
     PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
@@ -24,14 +21,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  try {
-    await jwtVerify(token, secret);
-    return NextResponse.next();
-  } catch {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
+  return NextResponse.next();
 }
 
 export const config = {
