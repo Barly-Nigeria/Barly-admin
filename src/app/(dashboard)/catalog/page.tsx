@@ -1,10 +1,10 @@
+import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { naira } from "@/lib/money";
 import { occasionLabel, vendorCategoryLabel } from "@/lib/labels";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -14,10 +14,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CreateItemForm, CreateProductForm, PriceForm } from "@/components/catalog-forms";
+import { cn } from "@/lib/utils";
 
-export default async function CatalogPage() {
+export default async function CatalogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const session = await getSession();
   const isManager = session?.role === "manager";
+  const { tab } = await searchParams;
+  const view = tab === "items" ? "items" : "packages";
 
   const [products, items, vendors] = await Promise.all([
     prisma.product.findMany({
@@ -41,12 +48,29 @@ export default async function CatalogPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="packages">
-        <TabsList>
-          <TabsTrigger value="packages">Packages</TabsTrigger>
-          <TabsTrigger value="items">Items</TabsTrigger>
-        </TabsList>
-        <TabsContent value="packages" className="space-y-4">
+      <div className="flex w-fit gap-1 rounded-lg bg-muted p-1">
+        <Link
+          href="/catalog"
+          className={cn(
+            "rounded-md px-3 py-1 text-sm font-medium",
+            view === "packages" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          Packages
+        </Link>
+        <Link
+          href="/catalog?tab=items"
+          className={cn(
+            "rounded-md px-3 py-1 text-sm font-medium",
+            view === "items" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          Items
+        </Link>
+      </div>
+
+      {view === "packages" ? (
+        <div className="space-y-4">
           {isManager && <CreateProductForm />}
           {products.length === 0 ? (
             <EmptyState
@@ -98,8 +122,9 @@ export default async function CatalogPage() {
               </Table>
             </div>
           )}
-        </TabsContent>
-        <TabsContent value="items" className="space-y-4">
+        </div>
+      ) : (
+        <div className="space-y-4">
           {isManager && (
             <CreateItemForm
               vendors={vendors.map((v) => ({
@@ -147,8 +172,8 @@ export default async function CatalogPage() {
               </Table>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
