@@ -16,9 +16,19 @@ export type CustomerLine = {
 export type VendorFillLine = {
   vendorId: string;
   vendorName: string;
+  vendorEmail: string;
+  vendorAddress: string;
   sku: string;
   name: string;
   quantity: number;
+};
+
+type VendorContact = {
+  id: string;
+  name: string;
+  email: string;
+  address: string;
+  city: string;
 };
 
 type InvoiceOrder = {
@@ -34,7 +44,7 @@ type InvoiceOrder = {
       sku: string;
       name: string;
       vendorId: string;
-      vendor: { id: string; name: string };
+      vendor: VendorContact;
     } | null;
   }[];
   product: {
@@ -45,11 +55,15 @@ type InvoiceOrder = {
         sku: string;
         name: string;
         vendorId: string;
-        vendor: { id: string; name: string };
+        vendor: VendorContact;
       };
     }[];
   };
 };
+
+function vendorShipTo(vendor: VendorContact) {
+  return [vendor.address, vendor.city].filter(Boolean).join(", ");
+}
 
 export function customerInvoiceLines(order: InvoiceOrder): CustomerLine[] {
   return order.lines.map((line) => ({
@@ -92,6 +106,8 @@ export function vendorFillLines(order: InvoiceOrder): VendorFillLine[] {
         add({
           vendorId: included.item.vendorId,
           vendorName: included.item.vendor.name,
+          vendorEmail: included.item.vendor.email,
+          vendorAddress: vendorShipTo(included.item.vendor),
           sku: included.item.sku,
           name: included.item.name,
           quantity: included.quantity * line.quantity,
@@ -101,6 +117,8 @@ export function vendorFillLines(order: InvoiceOrder): VendorFillLine[] {
       add({
         vendorId: line.item.vendorId,
         vendorName: line.item.vendor.name,
+        vendorEmail: line.item.vendor.email,
+        vendorAddress: vendorShipTo(line.item.vendor),
         sku: line.item.sku,
         name: line.item.name,
         quantity: line.quantity,
@@ -116,12 +134,21 @@ export function vendorFillLines(order: InvoiceOrder): VendorFillLine[] {
 export function groupByVendor(lines: VendorFillLine[]) {
   const groups = new Map<
     string,
-    { vendorId: string; vendorName: string; lines: VendorFillLine[]; pieceCount: number }
+    {
+      vendorId: string;
+      vendorName: string;
+      vendorEmail: string;
+      vendorAddress: string;
+      lines: VendorFillLine[];
+      pieceCount: number;
+    }
   >();
   for (const line of lines) {
     const group = groups.get(line.vendorId) ?? {
       vendorId: line.vendorId,
       vendorName: line.vendorName,
+      vendorEmail: line.vendorEmail,
+      vendorAddress: line.vendorAddress,
       lines: [],
       pieceCount: 0,
     };

@@ -33,7 +33,12 @@ export async function sendVendorSheets(orderId: string, formData: FormData) {
       orderId,
       vendorId: group.vendorId,
       itemCount: group.pieceCount,
-      summary: group.lines.map((l) => `${l.quantity}× ${l.name}`).join("; "),
+      summary: [
+        group.vendorEmail ? `to ${group.vendorEmail}` : null,
+        group.lines.map((l) => `${l.quantity}× ${l.name}`).join("; "),
+      ]
+        .filter(Boolean)
+        .join(" · "),
     })),
   });
 

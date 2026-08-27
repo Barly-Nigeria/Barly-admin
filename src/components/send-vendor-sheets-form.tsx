@@ -10,7 +10,7 @@ export function SendVendorSheetsForm({
   vendors,
 }: {
   orderId: string;
-  vendors: { id: string; name: string; pieceCount: number }[];
+  vendors: { id: string; name: string; email: string; pieceCount: number }[];
 }) {
   const [pending, start] = useTransition();
 
@@ -54,7 +54,11 @@ export function SendVendorSheetsForm({
               />
               <span>
                 {vendor.name}
-                <span className="text-muted-foreground"> · {vendor.pieceCount} pcs</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {vendor.pieceCount} pcs
+                  {vendor.email ? ` · ${vendor.email}` : ""}
+                </span>
               </span>
             </label>
           </li>

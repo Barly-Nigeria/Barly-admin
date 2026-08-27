@@ -40,6 +40,10 @@ async function main() {
     data: {
       name: "Distillers Hub Lagos",
       category: "spirits",
+      email: "orders@distillershub.ng",
+      phone: "+234 809 441 2201",
+      address: "14 Adeola Odeku Street, Victoria Island",
+      city: "Lagos",
       balanceDue: 1_850_000,
     },
   });
@@ -47,6 +51,10 @@ async function main() {
     data: {
       name: "Atlantic Mixers Co",
       category: "mixers",
+      email: "supply@atlanticmixers.ng",
+      phone: "+234 802 118 7740",
+      address: "7 Warehouse Road, Apapa",
+      city: "Lagos",
       balanceDue: 420_000,
     },
   });
@@ -54,6 +62,10 @@ async function main() {
     data: {
       name: "Chill Chain Logistics",
       category: "logistics",
+      email: "ops@chillchain.ng",
+      phone: "+234 701 555 0198",
+      address: "Plot 22 Kudirat Abiola Way, Oregun",
+      city: "Ikeja",
       balanceDue: 275_000,
     },
   });
@@ -61,6 +73,10 @@ async function main() {
     data: {
       name: "Crystal Serviceware",
       category: "glassware",
+      email: "hello@crystalserviceware.ng",
+      phone: "+234 813 220 4415",
+      address: "18 Admiralty Way, Lekki Phase 1",
+      city: "Lagos",
       balanceDue: 190_000,
     },
   });

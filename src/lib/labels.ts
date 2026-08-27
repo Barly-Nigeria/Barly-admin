@@ -33,12 +33,14 @@ export const ORDER_STATUSES = [
   { id: "cancelled", label: "Cancelled" },
 ] as const;
 
+export const VENDOR_CATEGORIES = [
+  { id: "spirits", label: "Spirits" },
+  { id: "mixers", label: "Mixers" },
+  { id: "logistics", label: "Logistics" },
+  { id: "glassware", label: "Glassware" },
+  { id: "other", label: "Other" },
+] as const;
+
 export function vendorCategoryLabel(id: string) {
-  const map: Record<string, string> = {
-    spirits: "Spirits",
-    mixers: "Mixers",
-    logistics: "Logistics",
-    glassware: "Glassware",
-  };
-  return map[id] ?? id;
+  return VENDOR_CATEGORIES.find((c) => c.id === id)?.label ?? id;
 }

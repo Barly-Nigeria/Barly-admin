@@ -30,9 +30,13 @@ model Customer {
 }
 
 model Vendor {
-  id         String          @id @default(cuid())
+  id         String           @id @default(cuid())
   name       String
   category   String
+  email      String           @default("")
+  phone      String           @default("")
+  address    String           @default("")
+  city       String           @default("")
   balanceDue Int
   items      Item[]
   payments   VendorPayment[]

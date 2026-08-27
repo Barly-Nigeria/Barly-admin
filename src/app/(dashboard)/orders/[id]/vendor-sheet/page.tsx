@@ -65,6 +65,9 @@ export default async function VendorSheetPage({
         groups.map((group) => (
           <section key={group.vendorId} className="space-y-3 break-inside-avoid">
             <h2 className="text-lg font-semibold">{group.vendorName}</h2>
+            <p className="text-sm text-muted-foreground">
+              {[group.vendorEmail, group.vendorAddress].filter(Boolean).join(" · ") || "No contact on file"}
+            </p>
             <p className="text-sm text-muted-foreground">{group.pieceCount} pieces total</p>
             <Table>
               <TableHeader>

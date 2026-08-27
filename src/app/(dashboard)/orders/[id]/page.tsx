@@ -165,6 +165,7 @@ export default async function OrderDetailPage({
             vendors={vendorGroups.map((g) => ({
               id: g.vendorId,
               name: g.vendorName,
+              email: g.vendorEmail,
               pieceCount: g.pieceCount,
             }))}
           />
