@@ -73,6 +73,7 @@ export default async function OrdersPage({
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Placed</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -92,6 +93,11 @@ export default async function OrdersPage({
                   <TableCell className="text-right">{naira(order.total)}</TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {formatDateTime(order.createdAt)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-right">
+                    <Link href={`/orders/${order.id}/invoice`} className="text-sm hover:underline">
+                      Invoice
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

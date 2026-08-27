@@ -1,17 +1,16 @@
-import { Wine } from "lucide-react";
 import { LoginForm } from "@/app/login/login-form";
+import { BrandLogo } from "@/components/brand-logo";
 
 export function LoginScreen({ error = false }: { error?: boolean }) {
   return (
-    <main className="flex min-h-full flex-1 items-center justify-center px-4 py-12">
+    <main className="flex min-h-full flex-1 items-center justify-center bg-black px-4 py-12">
       <div className="w-full max-w-md space-y-8">
-        <div className="space-y-2 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300">
-            <Wine className="size-6" />
+        <div className="space-y-4 text-center">
+          <div className="flex justify-center">
+            <BrandLogo size="lg" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Barly Admin</h1>
           <p className="text-sm text-muted-foreground">
-            Employee login for orders, catalog, cash, and guest insights.
+            Employee login for orders, invoices, vendors, and guest insights.
           </p>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm">

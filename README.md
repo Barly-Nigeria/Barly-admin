@@ -27,6 +27,8 @@ Managers can create packages and items, change prices, and record vendor payouts
 ## What you can do
 
 - See orders and move them from pending to fulfilled
+- Open an order breakdown, calculate the customer invoice, and print it
+- Send vendors a fulfilment sheet with SKUs and quantities only (no prices)
 - Create packages and SKUs, then change prices
 - Watch cash inflows from paid orders and outflows from payouts
 - Pay vendors (recorded locally)

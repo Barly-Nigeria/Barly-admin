@@ -5,23 +5,25 @@ import { usePathname } from "next/navigation";
 import {
   Banknote,
   Boxes,
+  FileSpreadsheet,
   LayoutDashboard,
   Mail,
   Menu,
   Receipt,
   Truck,
   Users,
-  Wine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { logoutAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import type { SessionEmployee } from "@/lib/auth";
+import { BrandLogo } from "@/components/brand-logo";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/orders", label: "Orders", icon: Receipt },
+  { href: "/invoices", label: "Invoices", icon: FileSpreadsheet },
   { href: "/catalog", label: "Catalog", icon: Boxes },
   { href: "/cash", label: "Cash flow", icon: Banknote },
   { href: "/vendors", label: "Vendors", icon: Truck },
@@ -62,7 +64,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppSidebar({ employee }: { employee: SessionEmployee }) {
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar p-4 md:flex">
+    <aside className="hidden w-64 shrink-0 flex-col border-r bg-black p-4 md:flex">
       <Brand />
       <div className="mt-6 flex-1">
         <NavLinks />
@@ -99,13 +101,9 @@ export function MobileNav({ employee }: { employee: SessionEmployee }) {
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-2">
-      <span className="flex size-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
-        <Wine className="size-4" />
-      </span>
+      <BrandLogo size={compact ? "sm" : "md"} />
       {!compact && (
-        <span className="font-semibold tracking-tight">
-          Barly <span className="text-muted-foreground font-normal">Admin</span>
-        </span>
+        <span className="sr-only">Barly Admin</span>
       )}
     </Link>
   );

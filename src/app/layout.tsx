@@ -16,7 +16,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Barly Admin",
   description:
-    "Employee admin for Barly — orders, catalog, cash flow, vendors, and customers.",
+    "Employee admin for Barly — orders, invoices, catalog, cash flow, vendors, and customers.",
+  icons: { icon: "/barly-logo.png" },
 };
 
 export default function RootLayout({

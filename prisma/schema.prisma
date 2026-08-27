@@ -36,6 +36,7 @@ model Vendor {
   balanceDue Int
   items      Item[]
   payments   VendorPayment[]
+  dispatches VendorDispatch[]
 }
 
 model Product {
@@ -86,6 +87,7 @@ model Order {
   product     Product     @relation(fields: [productId], references: [id])
   lines       OrderLine[]
   cashEntries CashEntry[]
+  dispatches  VendorDispatch[]
 }
 
 model OrderLine {
@@ -122,6 +124,17 @@ model VendorPayment {
   paidAt    DateTime   @default(now())
   vendor    Vendor     @relation(fields: [vendorId], references: [id])
   cashEntry CashEntry?
+}
+
+model VendorDispatch {
+  id        String   @id @default(cuid())
+  orderId   String
+  vendorId  String
+  sentAt    DateTime @default(now())
+  itemCount Int
+  summary   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
 }
 
 model Campaign {
