@@ -62,6 +62,7 @@ model Item {
   cost       Int
   sellPrice  Int
   stock      Int
+  imageUrl   String        @default("")
   vendorId   String
   vendor     Vendor        @relation(fields: [vendorId], references: [id])
   products   ProductItem[]

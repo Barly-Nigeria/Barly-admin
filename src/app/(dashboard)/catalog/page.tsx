@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { naira } from "@/lib/money";
 import { occasionLabel, vendorCategoryLabel } from "@/lib/labels";
+import { formatPickLine } from "@/lib/catalog-picks";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import {
@@ -13,7 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreateItemForm, CreateProductForm, PriceForm } from "@/components/catalog-forms";
+import {
+  CreateItemForm,
+  CreateProductForm,
+  ItemPhotoForm,
+  ItemPicksForm,
+  ItemThumb,
+  PriceForm,
+  ProductPicksForm,
+} from "@/components/catalog-forms";
 import { cn } from "@/lib/utils";
 
 export default async function CatalogPage({
@@ -29,14 +38,27 @@ export default async function CatalogPage({
   const [products, items, vendors] = await Promise.all([
     prisma.product.findMany({
       orderBy: { name: "asc" },
-      include: { _count: { select: { orders: true, items: true } } },
+      include: {
+        _count: { select: { orders: true, items: true } },
+        items: { include: { item: true }, orderBy: { item: { name: "asc" } } },
+      },
     }),
     prisma.item.findMany({
       orderBy: { name: "asc" },
-      include: { vendor: true },
+      include: {
+        vendor: true,
+        products: { include: { product: true }, orderBy: { product: { name: "asc" } } },
+      },
     }),
     prisma.vendor.findMany({ orderBy: { name: "asc" } }),
   ]);
+
+  const itemOptions = items.map((item) => ({ id: item.id, name: item.name, sku: item.sku }));
+  const packageOptions = products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    occasion: occasionLabel(product.occasion),
+  }));
 
   return (
     <div className="space-y-6">
@@ -44,7 +66,9 @@ export default async function CatalogPage({
         <h1 className="text-2xl font-semibold tracking-tight">Catalog</h1>
         <p className="text-sm text-muted-foreground">
           Packages guests book and the bottles, mixers, and rentals inside them.
-          {isManager ? " Managers can add SKUs and change prices." : " Staff can view prices; managers change them."}
+          {isManager
+            ? " Managers can pick SKUs into packages, add photos, and change prices."
+            : " Staff can view prices; managers change them."}
         </p>
       </div>
 
@@ -71,7 +95,7 @@ export default async function CatalogPage({
 
       {view === "packages" ? (
         <div className="space-y-4">
-          {isManager && <CreateProductForm />}
+          {isManager && <CreateProductForm items={itemOptions} />}
           {products.length === 0 ? (
             <EmptyState
               title="No packages yet"
@@ -85,9 +109,10 @@ export default async function CatalogPage({
                     <TableHead>Package</TableHead>
                     <TableHead>Occasion</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Items</TableHead>
+                    <TableHead>Picks</TableHead>
                     <TableHead>Orders</TableHead>
                     <TableHead>Price</TableHead>
+                    {isManager ? <TableHead></TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -95,27 +120,38 @@ export default async function CatalogPage({
                     <TableRow key={product.id}>
                       <TableCell>
                         <p className="font-medium">{product.name}</p>
-                        <p className="max-w-xs text-xs text-muted-foreground">
-                          {product.description}
-                        </p>
+                        <p className="max-w-xs text-xs text-muted-foreground">{product.description}</p>
                       </TableCell>
                       <TableCell>{occasionLabel(product.occasion)}</TableCell>
                       <TableCell>
                         <StatusBadge value={product.status} />
                       </TableCell>
-                      <TableCell>{product._count.items}</TableCell>
+                      <TableCell className="max-w-xs text-xs text-muted-foreground">
+                        {product.items.length === 0
+                          ? "No picks"
+                          : product.items.map((row) => formatPickLine(row.quantity, row.item.name)).join(" · ")}
+                      </TableCell>
                       <TableCell>{product._count.orders}</TableCell>
                       <TableCell>
                         {isManager ? (
-                          <PriceForm
-                            id={product.id}
-                            field="price"
-                            value={product.price}
-                          />
+                          <PriceForm id={product.id} field="price" value={product.price} />
                         ) : (
                           naira(product.price)
                         )}
                       </TableCell>
+                      {isManager ? (
+                        <TableCell>
+                          <ProductPicksForm
+                            productId={product.id}
+                            productName={product.name}
+                            items={itemOptions}
+                            selected={product.items.map((row) => ({
+                              id: row.itemId,
+                              quantity: row.quantity,
+                            }))}
+                          />
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -131,6 +167,7 @@ export default async function CatalogPage({
                 id: v.id,
                 name: `${v.name} (${vendorCategoryLabel(v.category)})`,
               }))}
+              packages={packageOptions}
             />
           )}
           {items.length === 0 ? (
@@ -143,20 +180,37 @@ export default async function CatalogPage({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Photo</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Vendor</TableHead>
+                    <TableHead>Picks</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead>Sell price</TableHead>
+                    {isManager ? <TableHead></TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
                     <TableRow key={item.id}>
+                      <TableCell>
+                        {isManager ? (
+                          <ItemPhotoForm itemId={item.id} itemName={item.name} imageUrl={item.imageUrl} />
+                        ) : (
+                          <ItemThumb src={item.imageUrl} alt={item.name} />
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell className="font-mono text-xs">{item.sku}</TableCell>
                       <TableCell>{item.vendor.name}</TableCell>
+                      <TableCell className="max-w-xs text-xs text-muted-foreground">
+                        {item.products.length === 0
+                          ? "Unassigned"
+                          : item.products
+                              .map((row) => formatPickLine(row.quantity, row.product.name))
+                              .join(" · ")}
+                      </TableCell>
                       <TableCell>{item.stock}</TableCell>
                       <TableCell>{naira(item.cost)}</TableCell>
                       <TableCell>
@@ -166,6 +220,19 @@ export default async function CatalogPage({
                           naira(item.sellPrice)
                         )}
                       </TableCell>
+                      {isManager ? (
+                        <TableCell>
+                          <ItemPicksForm
+                            itemId={item.id}
+                            itemName={item.name}
+                            packages={packageOptions}
+                            selected={item.products.map((row) => ({
+                              id: row.productId,
+                              quantity: row.quantity,
+                            }))}
+                          />
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
