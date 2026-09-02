@@ -9,8 +9,8 @@ import { asImageFile, removeItemImageFile, saveItemImage } from "@/lib/item-imag
 
 async function requireManager() {
   const session = await requireSession();
-  if (session.role !== "manager") {
-    throw new Error("Only managers can change the catalog.");
+  if (session.role !== "admin") {
+    throw new Error("Only admins can change the catalog.");
   }
   return session;
 }

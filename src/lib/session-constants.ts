@@ -1,4 +1,2 @@
-export const SESSION_COOKIE = "barly_session";
-
-export const SESSION_SECRET =
-  process.env.SESSION_SECRET ?? "barly-local-dev-secret-change-me-32b";
+export const ACCESS_COOKIE = "barly_admin_access";
+export const REFRESH_COOKIE = "barly_admin_refresh";

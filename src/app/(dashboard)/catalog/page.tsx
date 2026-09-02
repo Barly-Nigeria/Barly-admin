@@ -31,7 +31,7 @@ export default async function CatalogPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const session = await getSession();
-  const isManager = session?.role === "manager";
+  const isAdmin = session?.role === "admin";
   const { tab } = await searchParams;
   const view = tab === "items" ? "items" : "packages";
 
@@ -66,9 +66,9 @@ export default async function CatalogPage({
         <h1 className="text-2xl font-semibold tracking-tight">Catalog</h1>
         <p className="text-sm text-muted-foreground">
           Packages guests book and the bottles, mixers, and rentals inside them.
-          {isManager
-            ? " Managers can pick SKUs into packages, add photos, and change prices."
-            : " Staff can view prices; managers change them."}
+          {isAdmin
+            ? " Admins can pick SKUs into packages, add photos, and change prices."
+            : " Staff can view prices; admins change them."}
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export default async function CatalogPage({
 
       {view === "packages" ? (
         <div className="space-y-4">
-          {isManager && <CreateProductForm items={itemOptions} />}
+          {isAdmin && <CreateProductForm items={itemOptions} />}
           {products.length === 0 ? (
             <EmptyState
               title="No packages yet"
@@ -112,7 +112,7 @@ export default async function CatalogPage({
                     <TableHead>Picks</TableHead>
                     <TableHead>Orders</TableHead>
                     <TableHead>Price</TableHead>
-                    {isManager ? <TableHead></TableHead> : null}
+                    {isAdmin ? <TableHead></TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -133,13 +133,13 @@ export default async function CatalogPage({
                       </TableCell>
                       <TableCell>{product._count.orders}</TableCell>
                       <TableCell>
-                        {isManager ? (
+                        {isAdmin ? (
                           <PriceForm id={product.id} field="price" value={product.price} />
                         ) : (
                           naira(product.price)
                         )}
                       </TableCell>
-                      {isManager ? (
+                      {isAdmin ? (
                         <TableCell>
                           <ProductPicksForm
                             productId={product.id}
@@ -161,7 +161,7 @@ export default async function CatalogPage({
         </div>
       ) : (
         <div className="space-y-4">
-          {isManager && (
+          {isAdmin && (
             <CreateItemForm
               vendors={vendors.map((v) => ({
                 id: v.id,
@@ -188,14 +188,14 @@ export default async function CatalogPage({
                     <TableHead>Stock</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead>Sell price</TableHead>
-                    {isManager ? <TableHead></TableHead> : null}
+                    {isAdmin ? <TableHead></TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
-                        {isManager ? (
+                        {isAdmin ? (
                           <ItemPhotoForm itemId={item.id} itemName={item.name} imageUrl={item.imageUrl} />
                         ) : (
                           <ItemThumb src={item.imageUrl} alt={item.name} />
@@ -214,13 +214,13 @@ export default async function CatalogPage({
                       <TableCell>{item.stock}</TableCell>
                       <TableCell>{naira(item.cost)}</TableCell>
                       <TableCell>
-                        {isManager ? (
+                        {isAdmin ? (
                           <PriceForm id={item.id} field="sellPrice" value={item.sellPrice} />
                         ) : (
                           naira(item.sellPrice)
                         )}
                       </TableCell>
-                      {isManager ? (
+                      {isAdmin ? (
                         <TableCell>
                           <ItemPicksForm
                             itemId={item.id}
