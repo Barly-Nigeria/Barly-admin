@@ -10,8 +10,10 @@ import {
   Mail,
   Menu,
   Receipt,
+  Settings,
   Truck,
   Users,
+  UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -31,11 +33,22 @@ const NAV = [
   { href: "/marketing", label: "Marketing", icon: Mail },
 ];
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({
+  role,
+  onNavigate,
+}: {
+  role: SessionEmployee["role"];
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
+  const items = [
+    ...NAV,
+    ...(role === "admin" ? [{ href: "/team", label: "Team", icon: UsersRound }] : []),
+    { href: "/settings", label: "Account", icon: Settings },
+  ];
   return (
     <nav className="flex flex-col gap-1">
-      {NAV.map((item) => {
+      {items.map((item) => {
         const active =
           item.href === "/"
             ? pathname === "/"
@@ -67,7 +80,7 @@ export function AppSidebar({ employee }: { employee: SessionEmployee }) {
     <aside className="hidden w-64 shrink-0 flex-col border-r bg-black p-4 md:flex">
       <Brand />
       <div className="mt-6 flex-1">
-        <NavLinks />
+        <NavLinks role={employee.role} />
       </div>
       <EmployeeFooter employee={employee} />
     </aside>
@@ -87,7 +100,7 @@ export function MobileNav({ employee }: { employee: SessionEmployee }) {
         <SheetContent side="left" className="w-64 p-4">
           <Brand />
           <div className="mt-6">
-            <NavLinks />
+            <NavLinks role={employee.role} />
           </div>
           <div className="mt-8">
             <EmployeeFooter employee={employee} />

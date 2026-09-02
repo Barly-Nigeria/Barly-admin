@@ -6,6 +6,7 @@ const styles: Record<string, string> = {
   fulfilled: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   cancelled: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
   active: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
+  inactive: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
   archived: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
   paid: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   inflow: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",

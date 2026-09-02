@@ -28,7 +28,7 @@ import {
 
 export default async function VendorsPage() {
   const session = await getSession();
-  const isManager = session?.role === "manager";
+  const isAdmin = session?.role === "admin";
 
   const vendors = await prisma.vendor.findMany({
     orderBy: { name: "asc" },
@@ -56,7 +56,7 @@ export default async function VendorsPage() {
         <CardContent className="text-2xl font-semibold">{naira(outstanding)}</CardContent>
       </Card>
 
-      {isManager ? (
+      {isAdmin ? (
         <Card>
           <CardHeader>
             <CardTitle>Onboard a vendor</CardTitle>
@@ -69,16 +69,16 @@ export default async function VendorsPage() {
           </CardContent>
         </Card>
       ) : (
-        <p className="text-sm text-muted-foreground">Only managers can add or remove vendors.</p>
+        <p className="text-sm text-muted-foreground">Only admins can add or remove vendors.</p>
       )}
 
       {vendors.length === 0 ? (
         <EmptyState
           title="No vendors yet"
           description={
-            isManager
+            isAdmin
               ? "Use the form above to onboard the first supplier."
-              : "Ask a manager to onboard a supplier."
+              : "Ask an admin to onboard a supplier."
           }
         />
       ) : (
@@ -88,7 +88,7 @@ export default async function VendorsPage() {
               <CardHeader>
                 <CardTitle>{vendor.name}</CardTitle>
                 <CardDescription>{vendorCategoryLabel(vendor.category)}</CardDescription>
-                {isManager ? (
+                {isAdmin ? (
                   <CardAction>
                     <DeleteVendorButton
                       vendorId={vendor.id}
@@ -122,10 +122,10 @@ export default async function VendorsPage() {
                     <p className="text-xl font-semibold">{naira(vendor.balanceDue)}</p>
                     <p className="text-xs text-muted-foreground">{vendor._count.items} catalog items</p>
                   </div>
-                  {isManager ? (
+                  {isAdmin ? (
                     <PayVendorForm vendorId={vendor.id} max={vendor.balanceDue} />
                   ) : (
-                    <p className="text-xs text-muted-foreground">Manager payouts only</p>
+                    <p className="text-xs text-muted-foreground">Admin payouts only</p>
                   )}
                 </div>
                 {vendor.payments.length > 0 && (

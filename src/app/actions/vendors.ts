@@ -9,8 +9,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function payVendor(vendorId: string, formData: FormData) {
   const session = await requireSession();
-  if (session.role !== "manager") {
-    throw new Error("Only managers can pay vendors.");
+  if (session.role !== "admin") {
+    throw new Error("Only admins can pay vendors.");
   }
 
   const amount = Number(formData.get("amount"));
@@ -56,8 +56,8 @@ export async function payVendor(vendorId: string, formData: FormData) {
 
 async function requireManager() {
   const session = await requireSession();
-  if (session.role !== "manager") {
-    throw new Error("Only managers can change vendors.");
+  if (session.role !== "admin") {
+    throw new Error("Only admins can change vendors.");
   }
   return session;
 }
