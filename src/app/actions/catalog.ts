@@ -1,159 +1,441 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { parseCatalogPicks } from "@/lib/catalog-picks";
-import { asImageFile, removeItemImageFile, saveItemImage } from "@/lib/item-image";
+import { adminAuthed, requireSession } from "@/lib/auth";
+import {
+  CATALOG_LIST_PAGE_SIZE,
+  type CatalogAddOn,
+  type CatalogAddOnList,
+  type CatalogCategory,
+  type CatalogCategoryList,
+  type CatalogOccasion,
+  type CatalogPick,
+  type CatalogProductDetail,
+  type CatalogProductList,
+  type CatalogVariant,
+} from "@/lib/barly-api";
 
-async function requireManager() {
-  const session = await requireSession();
-  if (session.role !== "admin") {
-    throw new Error("Only admins can change the catalog.");
-  }
-  return session;
+function opt(formData: FormData, key: string) {
+  const value = String(formData.get(key) ?? "").trim();
+  return value === "" ? undefined : value;
 }
 
-async function assertIds(kind: "item" | "product", ids: string[]) {
-  if (ids.length === 0) return;
-  const count =
-    kind === "item"
-      ? await prisma.item.count({ where: { id: { in: ids } } })
-      : await prisma.product.count({ where: { id: { in: ids } } });
-  if (count !== ids.length) {
-    throw new Error(kind === "item" ? "One of those items is missing." : "One of those packages is missing.");
-  }
+function bool(formData: FormData, key: string) {
+  return formData.get(key) === "on";
 }
 
-export async function createProduct(formData: FormData) {
-  await requireManager();
-  const name = String(formData.get("name") ?? "").trim();
-  const occasion = String(formData.get("occasion") ?? "").trim();
-  const price = Number(formData.get("price"));
-  const description = String(formData.get("description") ?? "").trim();
-  const status = String(formData.get("status") ?? "active");
-  if (!name || !occasion || !Number.isFinite(price) || price <= 0) {
-    throw new Error("Name, occasion, and a positive price are required.");
+function intOrUndef(formData: FormData, key: string) {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (raw === "") return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function fail(path: string, message: string): never {
+  const joiner = path.includes("?") ? "&" : "?";
+  redirect(`${path}${joiner}error=${encodeURIComponent(message)}`);
+}
+
+async function mutate<T>(path: string, method: string, body: unknown, back: string) {
+  await requireSession();
+  const res = await adminAuthed<T>(path, body === undefined ? { method } : { method, body });
+  if (!res.ok) fail(back, res.message);
+  return res.body?.data;
+}
+
+async function loadListPage<T>(path: string): Promise<T> {
+  await requireSession();
+  const res = await adminAuthed<T>(path);
+  if (!res.ok || !res.body?.data) {
+    throw new Error(res.message || "Failed to load catalog");
   }
-  const picks = parseCatalogPicks(formData, "itemId", "itemQty");
-  await assertIds("item", picks.map((p) => p.id));
-  await prisma.product.create({
-    data: {
-      name,
-      occasion,
-      price,
-      description,
-      status,
-      items: {
-        create: picks.map((pick) => ({ itemId: pick.id, quantity: pick.quantity })),
-      },
-    },
+  return res.body.data;
+}
+
+export async function loadProductsPage(page: number) {
+  return loadListPage<CatalogProductList>(`/v1/admin/products?page=${page}&limit=${CATALOG_LIST_PAGE_SIZE}`);
+}
+
+export async function loadCategoriesPage(page: number) {
+  return loadListPage<CatalogCategoryList>(`/v1/admin/categories?page=${page}&limit=${CATALOG_LIST_PAGE_SIZE}`);
+}
+
+export async function loadAddOnsPage(page: number) {
+  return loadListPage<CatalogAddOnList>(`/v1/admin/add-ons?page=${page}&limit=${CATALOG_LIST_PAGE_SIZE}`);
+}
+
+export type CatalogImagePresign = {
+  upload_url: string;
+  public_url: string;
+  required_headers: Record<string, string>;
+};
+
+export async function presignCatalogImage(contentType: string): Promise<
+  { ok: true; data: CatalogImagePresign } | { ok: false; message: string }
+> {
+  await requireSession();
+  const res = await adminAuthed<CatalogImagePresign>("/v1/admin/media/presign", {
+    method: "POST",
+    body: { content_type: contentType },
   });
-  revalidatePath("/catalog");
-}
-
-export async function updateProductPrice(productId: string, formData: FormData) {
-  await requireManager();
-  const price = Number(formData.get("price"));
-  if (!Number.isFinite(price) || price <= 0) {
-    throw new Error("Enter a valid price.");
+  if (!res.ok || !res.body?.data?.upload_url || !res.body.data.public_url) {
+    return { ok: false, message: res.message || "Could not start image upload" };
   }
-  await prisma.product.update({ where: { id: productId }, data: { price } });
-  revalidatePath("/catalog");
+  return {
+    ok: true,
+    data: {
+      upload_url: res.body.data.upload_url,
+      public_url: res.body.data.public_url,
+      required_headers: res.body.data.required_headers ?? {},
+    },
+  };
 }
 
-export async function setProductPicks(productId: string, formData: FormData) {
-  await requireManager();
-  const product = await prisma.product.findUnique({ where: { id: productId }, select: { id: true } });
-  if (!product) throw new Error("Package not found.");
-  const picks = parseCatalogPicks(formData, "itemId", "itemQty");
-  await assertIds("item", picks.map((p) => p.id));
-  await prisma.$transaction([
-    prisma.productItem.deleteMany({ where: { productId } }),
-    prisma.productItem.createMany({
-      data: picks.map((pick) => ({ productId, itemId: pick.id, quantity: pick.quantity })),
-    }),
-  ]);
+export async function createCategoryAction(formData: FormData) {
+  const data = await mutate<CatalogCategory>(
+    "/v1/admin/categories",
+    "POST",
+    {
+      name: opt(formData, "name"),
+      slug: opt(formData, "slug"),
+      description: opt(formData, "description"),
+      image_url: opt(formData, "image_url"),
+      is_active: bool(formData, "is_active"),
+    },
+    "/catalog/categories/new",
+  );
   revalidatePath("/catalog");
+  revalidatePath("/catalog/categories");
+  redirect(`/catalog/categories/${data?.id ?? ""}`);
 }
 
-export async function createItem(formData: FormData) {
-  await requireManager();
-  const name = String(formData.get("name") ?? "").trim();
-  const sku = String(formData.get("sku") ?? "").trim().toUpperCase();
-  const cost = Number(formData.get("cost"));
-  const sellPrice = Number(formData.get("sellPrice"));
-  const stock = Number(formData.get("stock"));
-  const vendorId = String(formData.get("vendorId") ?? "");
-  if (!name || !sku || !vendorId || !Number.isFinite(sellPrice)) {
-    throw new Error("Name, SKU, vendor, and sell price are required.");
-  }
-  const picks = parseCatalogPicks(formData, "packageId", "packageQty");
-  await assertIds("product", picks.map((p) => p.id));
-
-  const image = asImageFile(formData.get("image"));
-  let imageUrl = "";
-  if (image) imageUrl = await saveItemImage(image);
-
-  try {
-    await prisma.item.create({
-      data: {
-        name,
-        sku,
-        cost: Number.isFinite(cost) ? cost : 0,
-        sellPrice,
-        stock: Number.isFinite(stock) ? stock : 0,
-        vendorId,
-        imageUrl,
-        products: {
-          create: picks.map((pick) => ({ productId: pick.id, quantity: pick.quantity })),
-        },
-      },
-    });
-  } catch (error) {
-    if (imageUrl) await removeItemImageFile(imageUrl);
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      throw new Error("That SKU is already in the catalog.");
-    }
-    throw error;
-  }
+export async function updateCategoryAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(
+    `/v1/admin/categories/${id}`,
+    "PATCH",
+    {
+      name: opt(formData, "name"),
+      slug: opt(formData, "slug"),
+      description: opt(formData, "description"),
+      image_url: opt(formData, "image_url"),
+      is_active: bool(formData, "is_active"),
+    },
+    `/catalog/categories/${id}/edit`,
+  );
   revalidatePath("/catalog");
+  revalidatePath("/catalog/categories");
+  revalidatePath(`/catalog/categories/${id}`);
+  redirect(`/catalog/categories/${id}`);
 }
 
-export async function updateItemPrice(itemId: string, formData: FormData) {
-  await requireManager();
-  const sellPrice = Number(formData.get("sellPrice"));
-  if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
-    throw new Error("Enter a valid sell price.");
-  }
-  await prisma.item.update({ where: { id: itemId }, data: { sellPrice } });
+export async function archiveCategoryAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/categories/${id}`, "PATCH", { is_active: false }, `/catalog/categories/${id}`);
   revalidatePath("/catalog");
+  revalidatePath("/catalog/categories");
+  revalidatePath(`/catalog/categories/${id}`);
+  redirect(`/catalog/categories/${id}`);
 }
 
-export async function setItemPicks(itemId: string, formData: FormData) {
-  await requireManager();
-  const item = await prisma.item.findUnique({ where: { id: itemId }, select: { id: true } });
-  if (!item) throw new Error("Item not found.");
-  const picks = parseCatalogPicks(formData, "packageId", "packageQty");
-  await assertIds("product", picks.map((p) => p.id));
-  await prisma.$transaction([
-    prisma.productItem.deleteMany({ where: { itemId } }),
-    prisma.productItem.createMany({
-      data: picks.map((pick) => ({ itemId, productId: pick.id, quantity: pick.quantity })),
-    }),
-  ]);
+export async function deleteCategoryAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/categories/${id}`, "DELETE", undefined, `/catalog/categories/${id}`);
   revalidatePath("/catalog");
+  revalidatePath("/catalog/categories");
+  redirect("/catalog/categories");
 }
 
-export async function updateItemImage(itemId: string, formData: FormData) {
-  await requireManager();
-  const item = await prisma.item.findUnique({ where: { id: itemId }, select: { id: true, imageUrl: true } });
-  if (!item) throw new Error("Item not found.");
-  const image = asImageFile(formData.get("image"));
-  if (!image) throw new Error("Choose a photo to upload.");
-  const imageUrl = await saveItemImage(image);
-  await prisma.item.update({ where: { id: itemId }, data: { imageUrl } });
-  if (item.imageUrl) await removeItemImageFile(item.imageUrl);
+export async function createProductAction(formData: FormData) {
+  const data = await mutate<CatalogProductDetail>(
+    "/v1/admin/products",
+    "POST",
+    {
+      name: opt(formData, "name"),
+      slug: opt(formData, "slug"),
+      category_id: opt(formData, "category_id"),
+      description: opt(formData, "description"),
+      base_image_url: opt(formData, "base_image_url"),
+      is_active: bool(formData, "is_active"),
+      is_popular: bool(formData, "is_popular"),
+      currency: "NGN",
+    },
+    "/catalog/new",
+  );
   revalidatePath("/catalog");
+  redirect(`/catalog/${data?.id ?? ""}`);
+}
+
+export async function updateProductAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(
+    `/v1/admin/products/${id}`,
+    "PATCH",
+    {
+      name: opt(formData, "name"),
+      slug: opt(formData, "slug"),
+      category_id: opt(formData, "category_id"),
+      description: opt(formData, "description"),
+      base_image_url: opt(formData, "base_image_url"),
+      is_active: bool(formData, "is_active"),
+      is_popular: bool(formData, "is_popular"),
+      currency: "NGN",
+    },
+    `/catalog/${id}/edit`,
+  );
+  revalidatePath("/catalog");
+  revalidatePath(`/catalog/${id}`);
+  redirect(`/catalog/${id}`);
+}
+
+export async function archiveProductAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/products/${id}`, "PATCH", { is_active: false }, `/catalog/${id}`);
+  revalidatePath("/catalog");
+  revalidatePath(`/catalog/${id}`);
+  redirect(`/catalog/${id}`);
+}
+
+export async function deleteProductAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/products/${id}`, "DELETE", undefined, `/catalog/${id}`);
+  revalidatePath("/catalog");
+  redirect("/catalog");
+}
+
+export async function createVariantAction(formData: FormData) {
+  const productId = String(formData.get("product_id") ?? "");
+  await mutate<CatalogVariant>(
+    `/v1/admin/products/${productId}/variants`,
+    "POST",
+    {
+      sku: opt(formData, "sku"),
+      attribute_name: opt(formData, "attribute_name"),
+      attribute_value: opt(formData, "attribute_value"),
+      price: intOrUndef(formData, "price"),
+      stock_quantity: intOrUndef(formData, "stock_quantity"),
+      weight_kg: intOrUndef(formData, "weight_kg"),
+      is_active: bool(formData, "is_active"),
+      currency: "NGN",
+    },
+    `/catalog/${productId}/edit`,
+  );
+  revalidatePath(`/catalog/${productId}`);
+  revalidatePath(`/catalog/${productId}/edit`);
+  redirect(`/catalog/${productId}/edit`);
+}
+
+export async function updateVariantAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const productId = String(formData.get("product_id") ?? "");
+  await mutate(
+    `/v1/admin/variants/${id}`,
+    "PATCH",
+    {
+      sku: opt(formData, "sku"),
+      attribute_name: opt(formData, "attribute_name"),
+      attribute_value: opt(formData, "attribute_value"),
+      price: intOrUndef(formData, "price"),
+      stock_quantity: intOrUndef(formData, "stock_quantity"),
+      weight_kg: intOrUndef(formData, "weight_kg"),
+      is_active: bool(formData, "is_active"),
+    },
+    `/catalog/${productId}/edit`,
+  );
+  revalidatePath(`/catalog/${productId}`);
+  revalidatePath(`/catalog/${productId}/edit`);
+  redirect(`/catalog/${productId}/edit`);
+}
+
+export async function deleteVariantAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const productId = String(formData.get("product_id") ?? "");
+  await mutate(`/v1/admin/variants/${id}`, "DELETE", undefined, `/catalog/${productId}/edit`);
+  revalidatePath(`/catalog/${productId}`);
+  revalidatePath(`/catalog/${productId}/edit`);
+  redirect(`/catalog/${productId}/edit`);
+}
+
+export async function assignProductJoinsAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const pickIds = formData.getAll("pick_ids").map(String);
+  const occasionIds = formData.getAll("occasion_ids").map(String);
+  const addOnIds = formData.getAll("add_on_ids").map(String);
+  await mutate(`/v1/admin/products/${id}/picks`, "PUT", { pick_ids: pickIds }, `/catalog/${id}/edit`);
+  await mutate(`/v1/admin/products/${id}/occasions`, "PUT", { occasion_ids: occasionIds }, `/catalog/${id}/edit`);
+  await mutate(`/v1/admin/products/${id}/add-ons`, "PUT", { add_on_ids: addOnIds }, `/catalog/${id}/edit`);
+  revalidatePath(`/catalog/${id}`);
+  revalidatePath(`/catalog/${id}/edit`);
+  redirect(`/catalog/${id}`);
+}
+
+export async function createAddOnAction(formData: FormData) {
+  const data = await mutate<CatalogAddOn>(
+    "/v1/admin/add-ons",
+    "POST",
+    {
+      name: opt(formData, "name"),
+      slug: opt(formData, "slug"),
+      description: opt(formData, "description"),
+      image_url: opt(formData, "image_url"),
+      price: intOrUndef(formData, "price"),
+      stock_quantity: intOrUndef(formData, "stock_quantity"),
+      is_active: bool(formData, "is_active"),
+      currency: "NGN",
+    },
+    "/catalog/add-ons/new",
+  );
+  revalidatePath("/catalog");
+  revalidatePath("/catalog/add-ons");
+  redirect(`/catalog/add-ons/${data?.id ?? ""}`);
+}
+
+export async function updateAddOnAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(
+    `/v1/admin/add-ons/${id}`,
+    "PATCH",
+    {
+      name: opt(formData, "name"),
+      slug: opt(formData, "slug"),
+      description: opt(formData, "description"),
+      image_url: opt(formData, "image_url"),
+      price: intOrUndef(formData, "price"),
+      stock_quantity: intOrUndef(formData, "stock_quantity"),
+      is_active: bool(formData, "is_active"),
+    },
+    `/catalog/add-ons/${id}/edit`,
+  );
+  revalidatePath("/catalog");
+  revalidatePath("/catalog/add-ons");
+  revalidatePath(`/catalog/add-ons/${id}`);
+  redirect(`/catalog/add-ons/${id}`);
+}
+
+export async function archiveAddOnAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/add-ons/${id}`, "PATCH", { is_active: false }, `/catalog/add-ons/${id}`);
+  revalidatePath("/catalog");
+  revalidatePath("/catalog/add-ons");
+  revalidatePath(`/catalog/add-ons/${id}`);
+  redirect(`/catalog/add-ons/${id}`);
+}
+
+export async function deleteAddOnAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/add-ons/${id}`, "DELETE", undefined, `/catalog/add-ons/${id}`);
+  revalidatePath("/catalog");
+  revalidatePath("/catalog/add-ons");
+  redirect("/catalog/add-ons");
+}
+
+export async function createPickAction(formData: FormData) {
+  const tags = String(formData.get("tags") ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const data = await mutate<CatalogPick>(
+    "/v1/admin/picks",
+    "POST",
+    {
+      name: opt(formData, "name"),
+      sub_text: opt(formData, "sub_text"),
+      image_url: opt(formData, "image_url"),
+      starting_price: intOrUndef(formData, "starting_price"),
+      tags,
+      is_active: bool(formData, "is_active"),
+    },
+    "/picks/new",
+  );
+  revalidatePath("/picks");
+  revalidatePath("/catalog");
+  redirect(`/picks/${data?.id ?? ""}`);
+}
+
+export async function updatePickAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const tags = String(formData.get("tags") ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  await mutate(
+    `/v1/admin/picks/${id}`,
+    "PATCH",
+    {
+      name: opt(formData, "name"),
+      sub_text: opt(formData, "sub_text"),
+      image_url: opt(formData, "image_url"),
+      starting_price: intOrUndef(formData, "starting_price"),
+      tags,
+      is_active: bool(formData, "is_active"),
+    },
+    `/picks/${id}/edit`,
+  );
+  revalidatePath("/picks");
+  revalidatePath(`/picks/${id}`);
+  redirect(`/picks/${id}`);
+}
+
+export async function archivePickAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/picks/${id}`, "PATCH", { is_active: false }, `/picks/${id}`);
+  revalidatePath("/picks");
+  revalidatePath(`/picks/${id}`);
+  redirect(`/picks/${id}`);
+}
+
+export async function deletePickAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/picks/${id}`, "DELETE", undefined, `/picks/${id}`);
+  revalidatePath("/picks");
+  redirect("/picks");
+}
+
+export async function createOccasionAction(formData: FormData) {
+  const data = await mutate<CatalogOccasion>(
+    "/v1/admin/occasions",
+    "POST",
+    {
+      name: opt(formData, "name"),
+      icon: opt(formData, "icon"),
+      is_active: bool(formData, "is_active"),
+    },
+    "/occasions/new",
+  );
+  revalidatePath("/occasions");
+  revalidatePath("/catalog");
+  redirect(`/occasions/${data?.id ?? ""}`);
+}
+
+export async function updateOccasionAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(
+    `/v1/admin/occasions/${id}`,
+    "PATCH",
+    {
+      name: opt(formData, "name"),
+      icon: opt(formData, "icon"),
+      is_active: bool(formData, "is_active"),
+    },
+    `/occasions/${id}/edit`,
+  );
+  revalidatePath("/occasions");
+  revalidatePath(`/occasions/${id}`);
+  redirect(`/occasions/${id}`);
+}
+
+export async function archiveOccasionAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/occasions/${id}`, "PATCH", { is_active: false }, `/occasions/${id}`);
+  revalidatePath("/occasions");
+  revalidatePath(`/occasions/${id}`);
+  redirect(`/occasions/${id}`);
+}
+
+export async function deleteOccasionAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  await mutate(`/v1/admin/occasions/${id}`, "DELETE", undefined, `/occasions/${id}`);
+  revalidatePath("/occasions");
+  redirect("/occasions");
 }

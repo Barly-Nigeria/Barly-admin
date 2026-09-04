@@ -36,6 +36,101 @@ export type TeamPayload = {
   invites: AdminInvite[];
 };
 
+export type CatalogCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  image_url?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CatalogProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  base_image_url?: string | null;
+  category?: { id: string; name: string; slug: string } | null;
+  starting_price?: number | null;
+  currency: string;
+  is_active: boolean;
+  is_popular: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CatalogVariant = {
+  id: string;
+  sku: string;
+  attribute_name: string;
+  attribute_value: string;
+  price: number;
+  currency: string;
+  stock_quantity: number;
+  sort_order: number;
+  weight_kg: number;
+  is_active: boolean;
+};
+
+export type CatalogAddOn = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  image_url?: string | null;
+  price: number;
+  currency: string;
+  stock_quantity: number;
+  is_active: boolean;
+  product_id?: string | null;
+  variant_id?: string | null;
+};
+
+export type CatalogProductDetail = CatalogProduct & {
+  variants: CatalogVariant[];
+  add_ons: CatalogAddOn[];
+  pick_ids: string[];
+  occasion_ids: string[];
+  add_on_ids: string[];
+};
+
+export const CATALOG_LIST_PAGE_SIZE = 30;
+
+export type CatalogListPage<T> = {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
+export type CatalogProductList = CatalogListPage<CatalogProduct>;
+export type CatalogCategoryList = CatalogListPage<CatalogCategory>;
+export type CatalogAddOnList = CatalogListPage<CatalogAddOn>;
+
+export type CatalogPick = {
+  id: string;
+  name: string;
+  sub_text?: string | null;
+  image_url?: string | null;
+  starting_price?: number | null;
+  is_active: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type CatalogOccasion = {
+  id: string;
+  name: string;
+  icon?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export async function adminApi<T>(
   path: string,
   options: {
