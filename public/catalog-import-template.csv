@@ -1,0 +1,4 @@
+product_slug,product_name,product_description,base_image_url,category_slug,category_name,product_is_active,product_is_popular,variant_sku,attribute_name,attribute_value,price,currency,stock_quantity,sort_order,weight_kg,variant_is_active
+corona-extra,Corona Extra,Crisp Mexican lager.,,beer,Beer,true,true,COR-6,Pack Size,6-Pack,4500,NGN,24,0,1,true
+corona-extra,Corona Extra,Crisp Mexican lager.,,beer,Beer,true,true,COR-12,Pack Size,12-Pack,8000,NGN,12,1,1,true
+heineken,Heineken,Premium lager.,,beer,Beer,true,false,HEI-BOTTLE,Pack Size,Bottle,1800,NGN,48,0,1,true

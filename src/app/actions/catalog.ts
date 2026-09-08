@@ -9,6 +9,8 @@ import {
   type CatalogAddOnList,
   type CatalogCategory,
   type CatalogCategoryList,
+  type CatalogImport,
+  type CatalogImportErrorPage,
   type CatalogOccasion,
   type CatalogPick,
   type CatalogProductDetail,
@@ -438,4 +440,70 @@ export async function deleteOccasionAction(formData: FormData) {
   await mutate(`/v1/admin/occasions/${id}`, "DELETE", undefined, `/occasions/${id}`);
   revalidatePath("/occasions");
   redirect("/occasions");
+}
+
+type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string };
+
+export async function createCatalogImport(input: {
+  filename: string;
+  content_type: string;
+  byte_size: number;
+}): Promise<ActionResult<CatalogImport>> {
+  await requireSession();
+  const res = await adminAuthed<CatalogImport>("/v1/admin/catalog/imports", {
+    method: "POST",
+    body: input,
+  });
+  if (!res.ok || !res.body?.data?.id || !res.body.data.upload_url) {
+    return { ok: false, message: res.message || "Could not start upload" };
+  }
+  return { ok: true, data: res.body.data };
+}
+
+export async function startCatalogImport(id: string): Promise<ActionResult<CatalogImport>> {
+  await requireSession();
+  const res = await adminAuthed<CatalogImport>(`/v1/admin/catalog/imports/${id}/start`, {
+    method: "POST",
+  });
+  if (!res.ok || !res.body?.data) {
+    return { ok: false, message: res.message || "Could not queue import" };
+  }
+  return { ok: true, data: res.body.data };
+}
+
+export async function getCatalogImport(id: string): Promise<ActionResult<CatalogImport>> {
+  await requireSession();
+  const res = await adminAuthed<CatalogImport>(`/v1/admin/catalog/imports/${id}`);
+  if (!res.ok || !res.body?.data) {
+    return { ok: false, message: res.message || "Could not load import" };
+  }
+  if (res.body.data.status === "completed") {
+    revalidatePath("/catalog");
+    revalidatePath("/catalog/categories");
+  }
+  return { ok: true, data: res.body.data };
+}
+
+export async function listCatalogImports(): Promise<CatalogImport[]> {
+  await requireSession();
+  const res = await adminAuthed<CatalogImport[]>("/v1/admin/catalog/imports");
+  if (!res.ok) {
+    throw new Error(res.message || "Failed to load imports");
+  }
+  return res.body?.data ?? [];
+}
+
+export async function getCatalogImportErrors(
+  id: string,
+  page = 1,
+  limit = 20,
+): Promise<ActionResult<CatalogImportErrorPage>> {
+  await requireSession();
+  const res = await adminAuthed<CatalogImportErrorPage>(
+    `/v1/admin/catalog/imports/${id}/errors?page=${page}&limit=${limit}`,
+  );
+  if (!res.ok || !res.body?.data) {
+    return { ok: false, message: res.message || "Could not load import errors" };
+  }
+  return { ok: true, data: res.body.data };
 }

@@ -12,6 +12,11 @@ const styles: Record<string, string> = {
   paid: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   inflow: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   outflow: "bg-rose-500/15 text-rose-200 border-rose-500/30",
+  awaiting_upload: "bg-amber-500/15 text-amber-200 border-amber-500/30",
+  queued: "bg-sky-500/15 text-sky-200 border-sky-500/30",
+  processing: "bg-sky-500/15 text-sky-200 border-sky-500/30",
+  completed: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
+  failed: "bg-rose-500/15 text-rose-200 border-rose-500/30",
 };
 
 export function StatusBadge({ value }: { value: string }) {

@@ -24,9 +24,14 @@ export default async function CatalogPage({
         title="Catalog"
         description="Products, categories, and add-ons. Archive hides a row from the guest store."
         actions={
-          <Button asChild>
-            <Link href="/catalog/new">New product</Link>
-          </Button>
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/catalog/import">Import CSV</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/catalog/new">New product</Link>
+            </Button>
+          </>
         }
       />
       <CatalogSubnav active="products" />

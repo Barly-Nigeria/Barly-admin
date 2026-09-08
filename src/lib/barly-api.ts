@@ -110,6 +110,47 @@ export type CatalogProductList = CatalogListPage<CatalogProduct>;
 export type CatalogCategoryList = CatalogListPage<CatalogCategory>;
 export type CatalogAddOnList = CatalogListPage<CatalogAddOn>;
 
+export type CatalogImportStatus =
+  | "awaiting_upload"
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed";
+
+export type CatalogImport = {
+  id: string;
+  filename: string;
+  status: CatalogImportStatus;
+  progress: number;
+  row_count: number;
+  created_categories: number;
+  created_products: number;
+  updated_products: number;
+  created_variants: number;
+  updated_variants: number;
+  error_count: number;
+  failure_message?: string | null;
+  upload_url?: string;
+  required_headers?: Record<string, string>;
+  expires_at?: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  created_at: string;
+};
+
+export type CatalogImportRowError = {
+  row: number;
+  field: string;
+  message: string;
+};
+
+export type CatalogImportErrorPage = {
+  items: CatalogImportRowError[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
 export type CatalogPick = {
   id: string;
   name: string;
