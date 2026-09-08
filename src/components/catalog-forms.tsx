@@ -1,545 +1,539 @@
 "use client";
 
-import { useId, useState, useTransition, type ReactNode } from "react";
-import { toast } from "sonner";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useFormStatus } from "react-dom";
 import {
-  createItem,
-  createProduct,
-  setItemPicks,
-  setProductPicks,
-  updateItemImage,
-  updateItemPrice,
-  updateProductPrice,
+  assignProductJoinsAction,
+  createAddOnAction,
+  createCategoryAction,
+  createOccasionAction,
+  createPickAction,
+  createProductAction,
+  createVariantAction,
+  presignCatalogImage,
+  updateAddOnAction,
+  updateCategoryAction,
+  updateOccasionAction,
+  updatePickAction,
+  updateProductAction,
+  updateVariantAction,
 } from "@/app/actions/catalog";
-import { OCCASIONS } from "@/lib/labels";
-import { naira } from "@/lib/money";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import type {
+  CatalogAddOn,
+  CatalogCategory,
+  CatalogOccasion,
+  CatalogPick,
+  CatalogProductDetail,
+  CatalogVariant,
+} from "@/lib/barly-api";
 
-type ItemOption = { id: string; name: string; sku: string };
-type PackageOption = { id: string; name: string; occasion: string };
-type SelectedPick = { id: string; quantity: number };
-
-const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
-const dialogClass = "max-h-[85vh] overflow-y-auto sm:max-w-lg";
-
-export function CreateProductForm({ items }: { items: ItemOption[] }) {
-  const [pending, start] = useTransition();
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button>New package</Button>
-      </DialogTrigger>
-      <DialogContent className={dialogClass}>
-        <DialogHeader>
-          <DialogTitle>Create package</DialogTitle>
-          <DialogDescription>Set the price, then pick the bottles and rentals inside it.</DialogDescription>
-        </DialogHeader>
-        <form
-          className="grid gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            const data = new FormData(form);
-            start(async () => {
-              try {
-                await createProduct(data);
-                toast.success("Package created");
-                form.reset();
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Could not create");
-              }
-            });
-          }}
-        >
-          <Field label="Name" name="name" required />
-          <label className="grid gap-1 text-sm">
-            Occasion
-            <select name="occasion" required className={selectClass}>
-              {OCCASIONS.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Field label="Price (₦)" name="price" type="number" required />
-          <label className="grid gap-1 text-sm">
-            Description
-            <Textarea name="description" rows={3} />
-          </label>
-          <CatalogPickList
-            legend="Item picks"
-            empty="Add SKUs on the Items tab first, then pick them here."
-            idField="itemId"
-            qtyPrefix="itemQty"
-            options={items.map((item) => ({
-              id: item.id,
-              label: item.name,
-              hint: item.sku,
-            }))}
-          />
-          <input type="hidden" name="status" value="active" />
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Save package"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function CreateItemForm({
-  vendors,
-  packages,
+function Submit({
+  label,
+  pendingLabel,
+  variant = "default",
+  size = "default",
 }: {
-  vendors: { id: string; name: string }[];
-  packages: PackageOption[];
+  label: string;
+  pendingLabel: string;
+  variant?: "default" | "outline" | "destructive";
+  size?: "default" | "sm";
 }) {
-  const [pending, start] = useTransition();
-  const [preview, setPreview] = useState<string | null>(null);
-
+  const { pending } = useFormStatus();
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button>New item</Button>
-      </DialogTrigger>
-      <DialogContent className={dialogClass}>
-        <DialogHeader>
-          <DialogTitle>Create item</DialogTitle>
-          <DialogDescription>Add a photo, then pick which packages should include this SKU.</DialogDescription>
-        </DialogHeader>
-        <form
-          className="grid gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = event.currentTarget;
-            const data = new FormData(form);
-            start(async () => {
-              try {
-                await createItem(data);
-                toast.success("Item created");
-                form.reset();
-                setPreview(null);
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Could not create");
-              }
-            });
-          }}
-        >
-          <Field label="Name" name="name" required />
-          <Field label="SKU" name="sku" required />
-          <label className="grid gap-1 text-sm">
-            Vendor
-            <select name="vendorId" required className={selectClass}>
-              {vendors.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <ImageField preview={preview} onPreview={setPreview} />
-          <div className="grid grid-cols-3 gap-2">
-            <Field label="Cost" name="cost" type="number" />
-            <Field label="Sell" name="sellPrice" type="number" required />
-            <Field label="Stock" name="stock" type="number" />
-          </div>
-          <CatalogPickList
-            legend="Package picks"
-            empty="No packages yet. Create a package, then attach this SKU."
-            idField="packageId"
-            qtyPrefix="packageQty"
-            options={packages.map((pkg) => ({
-              id: pkg.id,
-              label: pkg.name,
-              hint: pkg.occasion,
-            }))}
-          />
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Save item"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Button type="submit" variant={variant} size={size} disabled={pending}>
+      {pending ? pendingLabel : label}
+    </Button>
   );
 }
 
-export function ProductPicksForm({
-  productId,
-  productName,
-  items,
-  selected,
+function Check({ name, label, defaultChecked }: { name: string; label: string; defaultChecked?: boolean }) {
+  return (
+    <label className="flex items-center gap-2 text-sm">
+      <input type="checkbox" name={name} defaultChecked={defaultChecked} className="size-4 rounded border" />
+      {label}
+    </label>
+  );
+}
+
+function FormActions({
+  submit,
+  pending,
+  cancelHref,
+  span = "sm:col-span-2",
 }: {
-  productId: string;
-  productName: string;
-  items: ItemOption[];
-  selected: SelectedPick[];
+  submit: string;
+  pending: string;
+  cancelHref: string;
+  span?: string;
 }) {
   return (
-    <PicksDialog
-      title={`Picks · ${productName}`}
-      description="Tick the SKUs in this package and set how many of each."
-      triggerLabel="Picks"
-      successMessage="Package picks saved"
-      onSave={(data) => setProductPicks(productId, data)}
-    >
-      <CatalogPickList
-        legend="Item picks"
-        empty="Add SKUs on the Items tab first."
-        idField="itemId"
-        qtyPrefix="itemQty"
-        options={items.map((item) => {
-          const current = selected.find((s) => s.id === item.id);
-          return {
-            id: item.id,
-            label: item.name,
-            hint: item.sku,
-            defaultChecked: Boolean(current),
-            defaultQty: current?.quantity ?? 1,
-          };
-        })}
-      />
-    </PicksDialog>
-  );
-}
-
-export function ItemPicksForm({
-  itemId,
-  itemName,
-  packages,
-  selected,
-}: {
-  itemId: string;
-  itemName: string;
-  packages: PackageOption[];
-  selected: SelectedPick[];
-}) {
-  return (
-    <PicksDialog
-      title={`Picks · ${itemName}`}
-      description="Tick packages that should include this SKU."
-      triggerLabel="Picks"
-      successMessage="Item picks saved"
-      onSave={(data) => setItemPicks(itemId, data)}
-    >
-      <CatalogPickList
-        legend="Package picks"
-        empty="No packages yet."
-        idField="packageId"
-        qtyPrefix="packageQty"
-        options={packages.map((pkg) => {
-          const current = selected.find((s) => s.id === pkg.id);
-          return {
-            id: pkg.id,
-            label: pkg.name,
-            hint: pkg.occasion,
-            defaultChecked: Boolean(current),
-            defaultQty: current?.quantity ?? 1,
-          };
-        })}
-      />
-    </PicksDialog>
-  );
-}
-
-export function ItemPhotoForm({
-  itemId,
-  itemName,
-  imageUrl,
-}: {
-  itemId: string;
-  itemName: string;
-  imageUrl: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [pending, start] = useTransition();
-  const [preview, setPreview] = useState<string | null>(null);
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setPreview(null);
-      }}
-    >
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className="block rounded-md focus-visible:ring-3 focus-visible:ring-ring/50"
-          aria-label={imageUrl ? `Replace photo for ${itemName}` : `Add photo for ${itemName}`}
-        >
-          <ItemThumb src={imageUrl} alt={itemName} />
-        </button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{imageUrl ? "Replace photo" : "Add photo"}</DialogTitle>
-          <DialogDescription>{itemName}</DialogDescription>
-        </DialogHeader>
-        <form
-          className="grid gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            start(async () => {
-              try {
-                await updateItemImage(itemId, data);
-                toast.success("Photo saved");
-                setOpen(false);
-                setPreview(null);
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Could not save photo");
-              }
-            });
-          }}
-        >
-          <ImageField preview={preview ?? (imageUrl || null)} onPreview={setPreview} required />
-          <Button type="submit" disabled={pending}>
-            {pending ? "Uploading…" : "Save photo"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function ItemThumb({ src, alt }: { src: string; alt: string }) {
-  if (!src) {
-    return (
-      <span className="flex size-12 items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
-        No photo
-      </span>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className="size-12 rounded-md object-cover ring-1 ring-foreground/10"
-    />
-  );
-}
-
-export function PriceForm({
-  id,
-  field,
-  value,
-}: {
-  id: string;
-  field: "price" | "sellPrice";
-  value: number;
-}) {
-  const [pending, start] = useTransition();
-  return (
-    <form
-      className="flex items-center gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        start(async () => {
-          try {
-            if (field === "price") await updateProductPrice(id, data);
-            else await updateItemPrice(id, data);
-            toast.success("Price updated");
-          } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not update");
-          }
-        });
-      }}
-    >
-      <span className="sr-only">{naira(value)}</span>
-      <Input
-        name={field}
-        type="number"
-        defaultValue={value}
-        className="h-8 w-28"
-        min={1}
-      />
-      <Button type="submit" size="sm" variant="outline" disabled={pending}>
-        {pending ? "…" : "Set"}
+    <div className={`flex flex-wrap gap-2 ${span}`}>
+      <Submit label={submit} pendingLabel={pending} />
+      <Button variant="outline" asChild>
+        <Link href={cancelHref}>Cancel</Link>
       </Button>
+    </div>
+  );
+}
+
+const PRODUCT_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+function preventSubmitWhileUploading(e: FormEvent<HTMLFormElement>) {
+  if (e.currentTarget.querySelector("[data-image-uploading]")) {
+    e.preventDefault();
+  }
+}
+
+function ProductImageField({ initialUrl }: { initialUrl?: string | null }) {
+  const [url, setUrl] = useState(initialUrl ?? "");
+  const [preview, setPreview] = useState(initialUrl ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const objectUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
+
+  async function onFile(file: File | undefined) {
+    setError(null);
+    if (!file) return;
+    if (!PRODUCT_IMAGE_TYPES.has(file.type)) {
+      setError("Use a JPEG, PNG, WebP, or GIF image.");
+      return;
+    }
+
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    const local = URL.createObjectURL(file);
+    objectUrlRef.current = local;
+    setPreview(local);
+    setUploading(true);
+
+    try {
+      const signed = await presignCatalogImage(file.type);
+      if (!signed.ok) {
+        setError(signed.message);
+        return;
+      }
+      const put = await fetch(signed.data.upload_url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type,
+          ...signed.data.required_headers,
+        },
+        body: file,
+      });
+      if (!put.ok) {
+        setError("Upload failed. Try a different image.");
+        return;
+      }
+      setUrl(signed.data.public_url);
+    } catch {
+      setError("Upload failed. Try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 sm:col-span-2" data-image-uploading={uploading ? "" : undefined}>
+      <Label htmlFor="product-image">Image</Label>
+      <div className="flex items-start gap-3">
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="" className="size-24 rounded-lg border object-cover" />
+        ) : (
+          <div className="flex size-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
+            No image
+          </div>
+        )}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <Input
+            id="product-image"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            disabled={uploading}
+            onChange={(e) => void onFile(e.target.files?.[0])}
+          />
+          <p className="text-xs text-muted-foreground">
+            {uploading ? "Uploading…" : "JPEG, PNG, WebP, or GIF."}
+          </p>
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        </div>
+      </div>
+      <input type="hidden" name="base_image_url" value={url} />
+    </div>
+  );
+}
+
+export function CreateProductForm({ categories }: { categories: CatalogCategory[] }) {
+  return (
+    <form action={createProductAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
+      <Field name="name" label="Name" required />
+      <Field name="slug" label="Slug" placeholder="auto from name" />
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="category_id">Category</Label>
+        <select id="category_id" name="category_id" className="h-8 w-full rounded-lg border bg-background px-2.5 text-sm">
+          <option value="">None</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <ProductImageField />
+      <Check name="is_active" label="Active in store" defaultChecked />
+      <Check name="is_popular" label="Popular" />
+      <FormActions submit="Create product" pending="Creating…" cancelHref="/catalog" />
     </form>
   );
 }
 
-function PicksDialog({
+export function CreateCategoryForm() {
+  return (
+    <form action={createCategoryAction} className="grid gap-3 sm:grid-cols-2">
+      <Field name="name" label="Name" required />
+      <Field name="slug" label="Slug" placeholder="auto from name" />
+      <Field name="image_url" label="Image URL" className="sm:col-span-2" />
+      <Check name="is_active" label="Active" defaultChecked />
+      <FormActions submit="Create category" pending="Creating…" cancelHref="/catalog/categories" />
+    </form>
+  );
+}
+
+export function EditCategoryForm({ category }: { category: CatalogCategory }) {
+  return (
+    <form action={updateCategoryAction} className="grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="id" value={category.id} />
+      <Field name="name" label="Name" defaultValue={category.name} required />
+      <Field name="slug" label="Slug" defaultValue={category.slug} />
+      <Field name="image_url" label="Image URL" defaultValue={category.image_url ?? ""} className="sm:col-span-2" />
+      <Check name="is_active" label="Active" defaultChecked={category.is_active} />
+      <FormActions submit="Save" pending="Saving…" cancelHref={`/catalog/categories/${category.id}`} />
+    </form>
+  );
+}
+
+export function CreateAddOnForm() {
+  return (
+    <form action={createAddOnAction} className="grid gap-3 sm:grid-cols-2">
+      <Field name="name" label="Name" required />
+      <Field name="slug" label="Slug" placeholder="auto from name" />
+      <Field name="price" label="Price (NGN)" type="number" required />
+      <Field name="stock_quantity" label="Stock" type="number" />
+      <Field name="image_url" label="Image URL" className="sm:col-span-2" />
+      <Check name="is_active" label="Active" defaultChecked />
+      <FormActions submit="Create add-on" pending="Creating…" cancelHref="/catalog/add-ons" />
+    </form>
+  );
+}
+
+export function EditAddOnForm({ addOn }: { addOn: CatalogAddOn }) {
+  return (
+    <form action={updateAddOnAction} className="grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="id" value={addOn.id} />
+      <Field name="name" label="Name" defaultValue={addOn.name} required />
+      <Field name="slug" label="Slug" defaultValue={addOn.slug} />
+      <Field name="price" label="Price (NGN)" type="number" defaultValue={String(addOn.price)} />
+      <Field name="stock_quantity" label="Stock" type="number" defaultValue={String(addOn.stock_quantity)} />
+      <Field name="image_url" label="Image URL" defaultValue={addOn.image_url ?? ""} className="sm:col-span-2" />
+      <Check name="is_active" label="Active" defaultChecked={addOn.is_active} />
+      <FormActions submit="Save" pending="Saving…" cancelHref={`/catalog/add-ons/${addOn.id}`} />
+    </form>
+  );
+}
+
+export function ProductEditorForm({
+  product,
+  categories,
+}: {
+  product: CatalogProductDetail;
+  categories: CatalogCategory[];
+}) {
+  return (
+    <form action={updateProductAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="id" value={product.id} />
+      <Field name="name" label="Name" defaultValue={product.name} required />
+      <Field name="slug" label="Slug" defaultValue={product.slug} />
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="category_id">Category</Label>
+        <select
+          id="category_id"
+          name="category_id"
+          defaultValue={product.category?.id ?? ""}
+          className="h-8 w-full rounded-lg border bg-background px-2.5 text-sm"
+        >
+          <option value="">None</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <ProductImageField initialUrl={product.base_image_url} />
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea id="description" name="description" defaultValue={product.description ?? ""} rows={3} />
+      </div>
+      <Check name="is_active" label="Active in store" defaultChecked={product.is_active} />
+      <Check name="is_popular" label="Popular" defaultChecked={product.is_popular} />
+      <FormActions submit="Save product" pending="Saving…" cancelHref={`/catalog/${product.id}`} />
+    </form>
+  );
+}
+
+export function CreateVariantForm({ productId }: { productId: string }) {
+  return (
+    <form action={createVariantAction} className="grid gap-3 sm:grid-cols-3">
+      <input type="hidden" name="product_id" value={productId} />
+      <Field name="sku" label="SKU" required />
+      <Field name="attribute_name" label="Attribute" placeholder="Pack Size" required />
+      <Field name="attribute_value" label="Value" placeholder="6-Pack" required />
+      <Field name="price" label="Price (NGN)" type="number" required />
+      <Field name="stock_quantity" label="Stock" type="number" />
+      <Field name="weight_kg" label="Weight (kg)" type="number" step="0.01" />
+      <Check name="is_active" label="Active" defaultChecked />
+      <div className="sm:col-span-3">
+        <Submit label="Add variant" pendingLabel="Adding…" />
+      </div>
+    </form>
+  );
+}
+
+export function EditVariantRow({ variant, productId }: { variant: CatalogVariant; productId: string }) {
+  return (
+    <form action={updateVariantAction} className="grid gap-2 sm:grid-cols-8 sm:items-end">
+      <input type="hidden" name="id" value={variant.id} />
+      <input type="hidden" name="product_id" value={productId} />
+      <Field name="sku" label="SKU" defaultValue={variant.sku} />
+      <Field name="attribute_name" label="Attribute" defaultValue={variant.attribute_name} />
+      <Field name="attribute_value" label="Value" defaultValue={variant.attribute_value} />
+      <Field name="price" label="Price" type="number" defaultValue={String(variant.price)} />
+      <Field name="stock_quantity" label="Stock" type="number" defaultValue={String(variant.stock_quantity)} />
+      <Field name="weight_kg" label="Kg" type="number" step="0.01" defaultValue={String(variant.weight_kg)} />
+      <Check name="is_active" label="Active" defaultChecked={variant.is_active} />
+      <Submit label="Save" pendingLabel="Saving…" size="sm" variant="outline" />
+    </form>
+  );
+}
+
+export function AssignJoinsForm({
+  product,
+  picks,
+  occasions,
+  addOns,
+}: {
+  product: CatalogProductDetail;
+  picks: CatalogPick[];
+  occasions: CatalogOccasion[];
+  addOns: CatalogAddOn[];
+}) {
+  const pickSet = new Set(product.pick_ids ?? []);
+  const occasionSet = new Set(product.occasion_ids ?? []);
+  const addOnSet = new Set(product.add_on_ids ?? []);
+  return (
+    <form action={assignProductJoinsAction} className="space-y-4">
+      <input type="hidden" name="id" value={product.id} />
+      <JoinGroup title="Picks" name="pick_ids" items={picks} selected={pickSet} />
+      <JoinGroup title="Occasions" name="occasion_ids" items={occasions} selected={occasionSet} />
+      <JoinGroup title="Add-ons" name="add_on_ids" items={addOns} selected={addOnSet} />
+      <Submit label="Save assignments" pendingLabel="Saving…" />
+    </form>
+  );
+}
+
+function JoinGroup({
   title,
-  description,
-  triggerLabel,
-  successMessage,
-  onSave,
-  children,
+  name,
+  items,
+  selected,
 }: {
   title: string;
-  description: string;
-  triggerLabel: string;
-  successMessage: string;
-  onSave: (data: FormData) => Promise<void>;
-  children: ReactNode;
+  name: string;
+  items: { id: string; name: string }[];
+  selected: Set<string>;
 }) {
-  const [open, setOpen] = useState(false);
-  const [pending, start] = useTransition();
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{title}</p>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">None yet.</p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {items.map((item) => (
+            <label key={item.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name={name}
+                value={item.id}
+                defaultChecked={selected.has(item.id)}
+                className="size-4 rounded border"
+              />
+              {item.name}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ArchiveButton({ action, id }: { action: (formData: FormData) => Promise<void>; id: string }) {
+  return (
+    <form action={action}>
+      <input type="hidden" name="id" value={id} />
+      <Submit label="Archive" pendingLabel="Hiding…" variant="outline" />
+    </form>
+  );
+}
+
+export function ConfirmDeleteButton({
+  action,
+  id,
+  extra,
+  name,
+  description,
+  size = "default",
+}: {
+  action: (formData: FormData) => Promise<void>;
+  id: string;
+  extra?: Record<string, string>;
+  name: string;
+  description?: string;
+  size?: "default" | "sm";
+}) {
+  return (
+    <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="outline">
-          {triggerLabel}
+        <Button type="button" variant="destructive" size={size}>
+          Delete
         </Button>
       </DialogTrigger>
-      <DialogContent className={dialogClass}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>Delete {name}?</DialogTitle>
+          <DialogDescription>{description ?? "This cannot be undone."}</DialogDescription>
         </DialogHeader>
-        <form
-          className="grid gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            start(async () => {
-              try {
-                await onSave(data);
-                toast.success(successMessage);
-                setOpen(false);
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Could not save picks");
-              }
-            });
-          }}
-        >
-          {children}
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Save picks"}
-          </Button>
-        </form>
+        <DialogFooter>
+          <form action={action}>
+            <input type="hidden" name="id" value={id} />
+            {extra
+              ? Object.entries(extra).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)
+              : null}
+            <Submit label="Delete" pendingLabel="Deleting…" variant="destructive" />
+          </form>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-function CatalogPickList({
-  legend,
-  empty,
-  idField,
-  qtyPrefix,
-  options,
-}: {
-  legend: string;
-  empty: string;
-  idField: string;
-  qtyPrefix: string;
-  options: {
-    id: string;
-    label: string;
-    hint?: string;
-    defaultChecked?: boolean;
-    defaultQty?: number;
-  }[];
-}) {
+export function CreatePickForm() {
   return (
-    <fieldset className="grid gap-2">
-      <legend className="text-sm font-medium">{legend}</legend>
-      {options.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{empty}</p>
-      ) : (
-        <ul className="max-h-56 space-y-1 overflow-y-auto rounded-lg border p-2">
-          {options.map((option) => (
-            <li key={option.id} className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-muted/60">
-              <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name={idField}
-                  value={option.id}
-                  defaultChecked={option.defaultChecked}
-                  className="size-4 accent-red-500"
-                />
-                <span className="min-w-0">
-                  <span className="block truncate">{option.label}</span>
-                  {option.hint ? (
-                    <span className="block truncate text-xs text-muted-foreground">{option.hint}</span>
-                  ) : null}
-                </span>
-              </label>
-              <Input
-                name={`${qtyPrefix}-${option.id}`}
-                type="number"
-                min={1}
-                defaultValue={option.defaultQty ?? 1}
-                aria-label={`Quantity for ${option.label}`}
-                className="h-8 w-16 shrink-0"
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-    </fieldset>
+    <form action={createPickAction} className="grid gap-3 sm:grid-cols-2">
+      <Field name="name" label="Name" required />
+      <Field name="sub_text" label="Subtitle" />
+      <Field name="image_url" label="Image URL" className="sm:col-span-2" />
+      <Field name="starting_price" label="Starting price (NGN)" type="number" />
+      <Field name="tags" label="Tags" placeholder="birthday, featured" />
+      <Check name="is_active" label="Active" defaultChecked />
+      <FormActions submit="Create pick" pending="Creating…" cancelHref="/picks" />
+    </form>
   );
 }
 
-function ImageField({
-  preview,
-  onPreview,
-  required,
-}: {
-  preview: string | null;
-  onPreview: (url: string | null) => void;
-  required?: boolean;
-}) {
-  const inputId = useId();
+export function EditPickForm({ pick }: { pick: CatalogPick }) {
   return (
-    <label className="grid gap-1 text-sm">
-      <Label htmlFor={inputId}>Photo</Label>
-      {preview ? (
-        <img src={preview} alt="" className="h-28 w-full rounded-lg object-cover ring-1 ring-foreground/10" />
-      ) : null}
-      <Input
-        id={inputId}
-        name="image"
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        required={required}
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (!file) {
-            onPreview(null);
-            return;
-          }
-          onPreview(URL.createObjectURL(file));
-        }}
+    <form action={updatePickAction} className="grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="id" value={pick.id} />
+      <Field name="name" label="Name" defaultValue={pick.name} required />
+      <Field name="sub_text" label="Subtitle" defaultValue={pick.sub_text ?? ""} />
+      <Field name="image_url" label="Image URL" defaultValue={pick.image_url ?? ""} className="sm:col-span-2" />
+      <Field
+        name="starting_price"
+        label="Starting price (NGN)"
+        type="number"
+        defaultValue={pick.starting_price != null ? String(pick.starting_price) : ""}
       />
-      <span className="text-xs text-muted-foreground">JPEG, PNG, WebP, or GIF · up to 3 MB</span>
-    </label>
+      <Field name="tags" label="Tags" defaultValue={(pick.tags ?? []).join(", ")} />
+      <Check name="is_active" label="Active" defaultChecked={pick.is_active} />
+      <FormActions submit="Save" pending="Saving…" cancelHref={`/picks/${pick.id}`} />
+    </form>
+  );
+}
+
+export function CreateOccasionForm() {
+  return (
+    <form action={createOccasionAction} className="grid gap-3 sm:grid-cols-2">
+      <Field name="name" label="Name" required />
+      <Field name="icon" label="Icon URL" />
+      <Check name="is_active" label="Active" defaultChecked />
+      <FormActions submit="Create occasion" pending="Creating…" cancelHref="/occasions" />
+    </form>
+  );
+}
+
+export function EditOccasionForm({ occasion }: { occasion: CatalogOccasion }) {
+  return (
+    <form action={updateOccasionAction} className="grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="id" value={occasion.id} />
+      <Field name="name" label="Name" defaultValue={occasion.name} required />
+      <Field name="icon" label="Icon URL" defaultValue={occasion.icon ?? ""} />
+      <Check name="is_active" label="Active" defaultChecked={occasion.is_active} />
+      <FormActions submit="Save" pending="Saving…" cancelHref={`/occasions/${occasion.id}`} />
+    </form>
   );
 }
 
 function Field({
-  label,
   name,
+  label,
   type = "text",
   required,
+  defaultValue,
+  placeholder,
+  className,
+  step,
 }: {
-  label: string;
   name: string;
+  label: string;
   type?: string;
   required?: boolean;
+  defaultValue?: string;
+  placeholder?: string;
+  className?: string;
+  step?: string;
 }) {
   return (
-    <label className="grid gap-1 text-sm">
+    <div className={`space-y-2 ${className ?? ""}`}>
       <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} type={type} required={required} min={type === "number" ? 0 : undefined} />
-    </label>
+      <Input
+        id={name}
+        name={name}
+        type={type}
+        required={required}
+        defaultValue={defaultValue}
+        placeholder={placeholder}
+        step={step}
+      />
+    </div>
   );
 }

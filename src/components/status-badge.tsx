@@ -6,11 +6,17 @@ const styles: Record<string, string> = {
   fulfilled: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   cancelled: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
   active: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
+  popular: "bg-sky-500/15 text-sky-200 border-sky-500/30",
   inactive: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
   archived: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
   paid: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   inflow: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   outflow: "bg-rose-500/15 text-rose-200 border-rose-500/30",
+  awaiting_upload: "bg-amber-500/15 text-amber-200 border-amber-500/30",
+  queued: "bg-sky-500/15 text-sky-200 border-sky-500/30",
+  processing: "bg-sky-500/15 text-sky-200 border-sky-500/30",
+  completed: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
+  failed: "bg-rose-500/15 text-rose-200 border-rose-500/30",
 };
 
 export function StatusBadge({ value }: { value: string }) {
