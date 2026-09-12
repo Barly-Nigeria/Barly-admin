@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { adminAuthed } from "@/lib/auth";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CatalogImage, FormError, MetaList, PageHeader } from "@/components/catalog-chrome";
 import { ArchiveButton, ConfirmDeleteButton } from "@/components/catalog-forms";
+import { OccasionProductsCard } from "@/components/pick-products";
 import { archiveOccasionAction, deleteOccasionAction } from "@/app/actions/catalog";
-import type { CatalogOccasion } from "@/lib/barly-api";
+import type { CatalogOccasion, CatalogOccasionProduct } from "@/lib/barly-api";
 
 export default async function OccasionViewPage({
   params,
@@ -19,13 +20,15 @@ export default async function OccasionViewPage({
   const { id } = await params;
   const { error } = await searchParams;
   const res = await adminAuthed<CatalogOccasion>(`/v1/admin/occasions/${id}`);
+  const productsRes = await adminAuthed<CatalogOccasionProduct[]>(`/v1/admin/occasions/${id}/products`);
 
   if (res.status === 404) {
     notFound();
   }
 
   const occasion = res.body?.data;
-  const loadError = error || (!res.ok ? res.message : null);
+  const products = productsRes.body?.data ?? [];
+  const loadError = error || (!res.ok ? res.message : !productsRes.ok ? productsRes.message : null);
 
   if (!occasion) {
     return (
@@ -63,10 +66,29 @@ export default async function OccasionViewPage({
           <CardTitle>Summary</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6 sm:flex-row">
-          <CatalogImage src={occasion.icon} alt={occasion.name} />
-          <MetaList items={[{ label: "Icon URL", value: occasion.icon?.trim() || "—" }]} />
+          <CatalogImage src={imageSrc(occasion.icon)} alt={occasion.name} />
+          <MetaList
+            items={[
+              { label: "Description", value: occasion.description?.trim() || "—" },
+            ]}
+          />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Products</CardTitle>
+          <CardDescription>Order here is the occasion’s product order. Membership has no quantity.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OccasionProductsCard occasionId={occasion.id} initialProducts={products} />
         </CardContent>
       </Card>
     </div>
   );
+}
+
+function imageSrc(src?: string | null) {
+  if (!src) return null;
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) return src;
+  return null;
 }

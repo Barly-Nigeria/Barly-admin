@@ -157,16 +157,26 @@ export type CatalogPick = {
   sub_text?: string | null;
   image_url?: string | null;
   starting_price?: number | null;
+  description?: string | null;
+  metadata?: Record<string, unknown>;
   is_active: boolean;
   tags: string[];
   created_at: string;
   updated_at: string;
 };
 
+export type CatalogPickProduct = CatalogProduct & {
+  sort_order: number;
+};
+
+export type CatalogOccasionProduct = CatalogPickProduct;
+
 export type CatalogOccasion = {
   id: string;
   name: string;
   icon?: string | null;
+  description?: string | null;
+  metadata?: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
   updated_at: string;

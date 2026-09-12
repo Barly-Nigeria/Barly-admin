@@ -95,16 +95,16 @@ export function ChipList({ items, empty = "None assigned." }: { items: string[];
   );
 }
 
-export function CatalogImage({ src, alt }: { src?: string | null; alt: string }) {
+export function CatalogImage({ src, alt, className }: { src?: string | null; alt: string; className?: string }) {
   if (!src) {
     return (
-      <div className="flex size-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
+      <div className={cn("flex size-24 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground", className)}>
         No image
       </div>
     );
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} className="size-24 rounded-lg border object-cover" />
+    <img src={src} alt={alt} className={cn("size-24 rounded-lg border object-cover", className)} />
   );
 }
