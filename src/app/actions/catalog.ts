@@ -13,6 +13,9 @@ import {
   type CatalogImportErrorPage,
   type CatalogOccasion,
   type CatalogPick,
+  type CatalogPickProduct,
+  type CatalogOccasionProduct,
+  type CatalogProduct,
   type CatalogProductDetail,
   type CatalogProductList,
   type CatalogVariant,
@@ -347,6 +350,7 @@ export async function createPickAction(formData: FormData) {
       starting_price: intOrUndef(formData, "starting_price"),
       tags,
       is_active: bool(formData, "is_active"),
+      description: String(formData.get("description") ?? ""),
     },
     "/picks/new",
   );
@@ -371,6 +375,7 @@ export async function updatePickAction(formData: FormData) {
       starting_price: intOrUndef(formData, "starting_price"),
       tags,
       is_active: bool(formData, "is_active"),
+      description: String(formData.get("description") ?? ""),
     },
     `/picks/${id}/edit`,
   );
@@ -394,6 +399,56 @@ export async function deletePickAction(formData: FormData) {
   redirect("/picks");
 }
 
+export async function searchCatalogProducts(q: string): Promise<
+  { ok: true; items: CatalogProduct[] } | { ok: false; message: string }
+> {
+  await requireSession();
+  const params = new URLSearchParams({ page: "1", limit: "20" });
+  const query = q.trim();
+  if (query) params.set("q", query);
+  const res = await adminAuthed<CatalogProductList>(`/v1/admin/products?${params.toString()}`);
+  if (!res.ok || !res.body?.data) {
+    return { ok: false, message: res.message || "Could not search products" };
+  }
+  return { ok: true, items: res.body.data.items ?? [] };
+}
+
+export async function replacePickProductsAction(
+  pickId: string,
+  productIds: string[],
+): Promise<{ ok: true; items: CatalogPickProduct[] } | { ok: false; message: string }> {
+  await requireSession();
+  const res = await adminAuthed<CatalogPickProduct[]>(`/v1/admin/picks/${pickId}/products`, {
+    method: "PUT",
+    body: { product_ids: productIds },
+  });
+  if (!res.ok || !res.body?.data) {
+    return { ok: false, message: res.message || "Could not update pick products" };
+  }
+  revalidatePath(`/picks/${pickId}`);
+  revalidatePath("/picks");
+  revalidatePath("/catalog");
+  return { ok: true, items: res.body.data };
+}
+
+export async function replaceOccasionProductsAction(
+  occasionId: string,
+  productIds: string[],
+): Promise<{ ok: true; items: CatalogOccasionProduct[] } | { ok: false; message: string }> {
+  await requireSession();
+  const res = await adminAuthed<CatalogOccasionProduct[]>(`/v1/admin/occasions/${occasionId}/products`, {
+    method: "PUT",
+    body: { product_ids: productIds },
+  });
+  if (!res.ok || !res.body?.data) {
+    return { ok: false, message: res.message || "Could not update occasion products" };
+  }
+  revalidatePath(`/occasions/${occasionId}`);
+  revalidatePath("/occasions");
+  revalidatePath("/catalog");
+  return { ok: true, items: res.body.data };
+}
+
 export async function createOccasionAction(formData: FormData) {
   const data = await mutate<CatalogOccasion>(
     "/v1/admin/occasions",
@@ -402,6 +457,7 @@ export async function createOccasionAction(formData: FormData) {
       name: opt(formData, "name"),
       icon: opt(formData, "icon"),
       is_active: bool(formData, "is_active"),
+      description: String(formData.get("description") ?? ""),
     },
     "/occasions/new",
   );
@@ -419,6 +475,7 @@ export async function updateOccasionAction(formData: FormData) {
       name: opt(formData, "name"),
       icon: opt(formData, "icon"),
       is_active: bool(formData, "is_active"),
+      description: String(formData.get("description") ?? ""),
     },
     `/occasions/${id}/edit`,
   );

@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FormError, PageHeader, TableShell } from "@/components/catalog-chrome";
+import { CatalogImage, FormError, PageHeader, TableShell } from "@/components/catalog-chrome";
 import type { CatalogOccasion } from "@/lib/barly-api";
 
 export default async function OccasionsPage({
@@ -28,7 +28,7 @@ export default async function OccasionsPage({
     <div className="space-y-6">
       <PageHeader
         title="Occasions"
-        description="Birthday, thank-you, and other moments. Assign products from the product editor."
+        description="Birthday, thank-you, and other moments guests can shop for."
         actions={
           <Button asChild>
             <Link href="/occasions/new">New occasion</Link>
@@ -40,7 +40,7 @@ export default async function OccasionsPage({
       {occasions.length === 0 && res.ok ? (
         <EmptyState
           title="No occasions"
-          description="Create an occasion, then assign products from Catalog."
+          description="Create an occasion, then add products on its page."
           action={
             <Button asChild>
               <Link href="/occasions/new">New occasion</Link>
@@ -52,8 +52,8 @@ export default async function OccasionsPage({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-14">Icon</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Icon</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -61,12 +61,19 @@ export default async function OccasionsPage({
               {occasions.map((occasion) => (
                 <TableRow key={occasion.id}>
                   <TableCell>
+                    {imageSrc(occasion.icon) ? (
+                      <CatalogImage src={occasion.icon} alt="" className="size-10" />
+                    ) : (
+                      <div className="size-10 rounded-lg border border-dashed" />
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Link href={`/occasions/${occasion.id}`} className="font-medium hover:underline">
                       {occasion.name}
                     </Link>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-muted-foreground">
-                    {occasion.icon || "—"}
+                    {occasion.description ? (
+                      <p className="line-clamp-1 text-xs text-muted-foreground">{occasion.description}</p>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <StatusBadge value={occasion.is_active ? "active" : "inactive"} />
@@ -79,4 +86,10 @@ export default async function OccasionsPage({
       ) : null}
     </div>
   );
+}
+
+function imageSrc(src?: string | null) {
+  if (!src) return null;
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) return src;
+  return null;
 }

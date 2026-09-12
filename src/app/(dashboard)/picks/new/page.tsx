@@ -20,7 +20,7 @@ export default async function NewPickPage({
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Details</CardTitle>
-          <CardDescription>Assign products from a product’s edit screen.</CardDescription>
+          <CardDescription>Add products after saving, from this pick’s page.</CardDescription>
         </CardHeader>
         <CardContent>
           <CreatePickForm />

@@ -98,9 +98,22 @@ function preventSubmitWhileUploading(e: FormEvent<HTMLFormElement>) {
   }
 }
 
-function ProductImageField({ initialUrl }: { initialUrl?: string | null }) {
+function isMediaUrl(src?: string | null) {
+  if (!src) return false;
+  return src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/");
+}
+
+function CatalogImageField({
+  initialUrl,
+  name = "base_image_url",
+  inputId = "product-image",
+}: {
+  initialUrl?: string | null;
+  name?: string;
+  inputId?: string;
+}) {
   const [url, setUrl] = useState(initialUrl ?? "");
-  const [preview, setPreview] = useState(initialUrl ?? "");
+  const [preview, setPreview] = useState(isMediaUrl(initialUrl) ? initialUrl ?? "" : "");
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const objectUrlRef = useRef<string | null>(null);
@@ -153,7 +166,7 @@ function ProductImageField({ initialUrl }: { initialUrl?: string | null }) {
 
   return (
     <div className="space-y-2 sm:col-span-2" data-image-uploading={uploading ? "" : undefined}>
-      <Label htmlFor="product-image">Image</Label>
+      <Label htmlFor={inputId}>Image</Label>
       <div className="flex items-start gap-3">
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -165,7 +178,7 @@ function ProductImageField({ initialUrl }: { initialUrl?: string | null }) {
         )}
         <div className="min-w-0 flex-1 space-y-1.5">
           <Input
-            id="product-image"
+            id={inputId}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
             disabled={uploading}
@@ -177,7 +190,7 @@ function ProductImageField({ initialUrl }: { initialUrl?: string | null }) {
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
       </div>
-      <input type="hidden" name="base_image_url" value={url} />
+      <input type="hidden" name={name} value={url} />
     </div>
   );
 }
@@ -198,7 +211,7 @@ export function CreateProductForm({ categories }: { categories: CatalogCategory[
           ))}
         </select>
       </div>
-      <ProductImageField />
+      <CatalogImageField />
       <Check name="is_active" label="Active in store" defaultChecked />
       <Check name="is_popular" label="Popular" />
       <FormActions submit="Create product" pending="Creating…" cancelHref="/catalog" />
@@ -288,7 +301,7 @@ export function ProductEditorForm({
           ))}
         </select>
       </div>
-      <ProductImageField initialUrl={product.base_image_url} />
+      <CatalogImageField initialUrl={product.base_image_url} />
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" name="description" defaultValue={product.description ?? ""} rows={3} />
@@ -448,13 +461,14 @@ export function ConfirmDeleteButton({
 
 export function CreatePickForm() {
   return (
-    <form action={createPickAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={createPickAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
       <Field name="name" label="Name" required />
       <Field name="sub_text" label="Subtitle" />
-      <Field name="image_url" label="Image URL" className="sm:col-span-2" />
+      <CatalogImageField name="image_url" inputId="pick-image" />
       <Field name="starting_price" label="Starting price (NGN)" type="number" />
       <Field name="tags" label="Tags" placeholder="birthday, featured" />
       <Check name="is_active" label="Active" defaultChecked />
+      <DescriptionField />
       <FormActions submit="Create pick" pending="Creating…" cancelHref="/picks" />
     </form>
   );
@@ -462,11 +476,11 @@ export function CreatePickForm() {
 
 export function EditPickForm({ pick }: { pick: CatalogPick }) {
   return (
-    <form action={updatePickAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={updatePickAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="id" value={pick.id} />
       <Field name="name" label="Name" defaultValue={pick.name} required />
       <Field name="sub_text" label="Subtitle" defaultValue={pick.sub_text ?? ""} />
-      <Field name="image_url" label="Image URL" defaultValue={pick.image_url ?? ""} className="sm:col-span-2" />
+      <CatalogImageField name="image_url" inputId="pick-image" initialUrl={pick.image_url} />
       <Field
         name="starting_price"
         label="Starting price (NGN)"
@@ -475,6 +489,7 @@ export function EditPickForm({ pick }: { pick: CatalogPick }) {
       />
       <Field name="tags" label="Tags" defaultValue={(pick.tags ?? []).join(", ")} />
       <Check name="is_active" label="Active" defaultChecked={pick.is_active} />
+      <DescriptionField defaultValue={pick.description} />
       <FormActions submit="Save" pending="Saving…" cancelHref={`/picks/${pick.id}`} />
     </form>
   );
@@ -482,10 +497,11 @@ export function EditPickForm({ pick }: { pick: CatalogPick }) {
 
 export function CreateOccasionForm() {
   return (
-    <form action={createOccasionAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={createOccasionAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
       <Field name="name" label="Name" required />
-      <Field name="icon" label="Icon URL" />
+      <CatalogImageField name="icon" inputId="occasion-icon" />
       <Check name="is_active" label="Active" defaultChecked />
+      <DescriptionField />
       <FormActions submit="Create occasion" pending="Creating…" cancelHref="/occasions" />
     </form>
   );
@@ -493,13 +509,23 @@ export function CreateOccasionForm() {
 
 export function EditOccasionForm({ occasion }: { occasion: CatalogOccasion }) {
   return (
-    <form action={updateOccasionAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={updateOccasionAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="id" value={occasion.id} />
       <Field name="name" label="Name" defaultValue={occasion.name} required />
-      <Field name="icon" label="Icon URL" defaultValue={occasion.icon ?? ""} />
+      <CatalogImageField name="icon" inputId="occasion-icon" initialUrl={occasion.icon} />
       <Check name="is_active" label="Active" defaultChecked={occasion.is_active} />
+      <DescriptionField defaultValue={occasion.description} />
       <FormActions submit="Save" pending="Saving…" cancelHref={`/occasions/${occasion.id}`} />
     </form>
+  );
+}
+
+function DescriptionField({ defaultValue }: { defaultValue?: string | null }) {
+  return (
+    <div className="space-y-2 sm:col-span-2">
+      <Label htmlFor="description">Description</Label>
+      <Textarea id="description" name="description" defaultValue={defaultValue ?? ""} rows={3} />
+    </div>
   );
 }
 

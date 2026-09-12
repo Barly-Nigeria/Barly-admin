@@ -4,11 +4,12 @@ import { adminAuthed } from "@/lib/auth";
 import { naira } from "@/lib/money";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CatalogImage, ChipList, FormError, MetaList, PageHeader } from "@/components/catalog-chrome";
 import { ArchiveButton, ConfirmDeleteButton } from "@/components/catalog-forms";
+import { PickProductsCard } from "@/components/pick-products";
 import { archivePickAction, deletePickAction } from "@/app/actions/catalog";
-import type { CatalogPick } from "@/lib/barly-api";
+import type { CatalogPick, CatalogPickProduct } from "@/lib/barly-api";
 
 export default async function PickViewPage({
   params,
@@ -20,13 +21,15 @@ export default async function PickViewPage({
   const { id } = await params;
   const { error } = await searchParams;
   const res = await adminAuthed<CatalogPick>(`/v1/admin/picks/${id}`);
+  const productsRes = await adminAuthed<CatalogPickProduct[]>(`/v1/admin/picks/${id}/products`);
 
   if (res.status === 404) {
     notFound();
   }
 
   const pick = res.body?.data;
-  const loadError = error || (!res.ok ? res.message : null);
+  const products = productsRes.body?.data ?? [];
+  const loadError = error || (!res.ok ? res.message : !productsRes.ok ? productsRes.message : null);
 
   if (!pick) {
     return (
@@ -73,6 +76,7 @@ export default async function PickViewPage({
                   label: "Starting price",
                   value: pick.starting_price != null ? naira(pick.starting_price) : "—",
                 },
+                { label: "Description", value: pick.description?.trim() || "—" },
               ]}
             />
             <div className="space-y-2">
@@ -80,6 +84,15 @@ export default async function PickViewPage({
               <ChipList items={pick.tags ?? []} empty="No tags." />
             </div>
           </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Products</CardTitle>
+          <CardDescription>Order here is the pick’s product order. Membership has no quantity.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PickProductsCard pickId={pick.id} initialProducts={products} />
         </CardContent>
       </Card>
     </div>

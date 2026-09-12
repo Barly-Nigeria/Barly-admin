@@ -20,7 +20,7 @@ export default async function NewOccasionPage({
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Details</CardTitle>
-          <CardDescription>Assign products from a product’s edit screen.</CardDescription>
+          <CardDescription>Add products after saving, from this occasion’s page.</CardDescription>
         </CardHeader>
         <CardContent>
           <CreateOccasionForm />

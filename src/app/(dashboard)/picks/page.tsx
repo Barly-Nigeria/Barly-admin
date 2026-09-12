@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FormError, PageHeader, TableShell } from "@/components/catalog-chrome";
+import { CatalogImage, FormError, PageHeader, TableShell } from "@/components/catalog-chrome";
 import type { CatalogPick } from "@/lib/barly-api";
 
 export default async function PicksPage({
@@ -29,7 +29,7 @@ export default async function PicksPage({
     <div className="space-y-6">
       <PageHeader
         title="Picks"
-        description="Curated collections. Assign products from the product editor — there is no quantity on the join."
+        description="Curated collections guests can browse."
         actions={
           <Button asChild>
             <Link href="/picks/new">New pick</Link>
@@ -41,7 +41,7 @@ export default async function PicksPage({
       {picks.length === 0 && res.ok ? (
         <EmptyState
           title="No picks"
-          description="Create a pick, then assign products from Catalog."
+          description="Create a pick, then add products on its page."
           action={
             <Button asChild>
               <Link href="/picks/new">New pick</Link>
@@ -53,6 +53,7 @@ export default async function PicksPage({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-14">Image</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Tags</TableHead>
                 <TableHead>From</TableHead>
@@ -62,6 +63,13 @@ export default async function PicksPage({
             <TableBody>
               {picks.map((pick) => (
                 <TableRow key={pick.id}>
+                  <TableCell>
+                    {pick.image_url ? (
+                      <CatalogImage src={pick.image_url} alt="" className="size-10" />
+                    ) : (
+                      <div className="size-10 rounded-lg border border-dashed" />
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Link href={`/picks/${pick.id}`} className="font-medium hover:underline">
                       {pick.name}
