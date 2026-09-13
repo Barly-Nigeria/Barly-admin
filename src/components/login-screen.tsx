@@ -3,7 +3,7 @@ import { AuthShell } from "@/components/auth-shell";
 
 export function LoginScreen({ error = false }: { error?: boolean }) {
   return (
-    <AuthShell description="Employee login for orders, invoices, vendors, and guest insights.">
+    <AuthShell description="Employee login for orders, invoices, catalog, and guest insights.">
       <LoginForm error={error} />
     </AuthShell>
   );

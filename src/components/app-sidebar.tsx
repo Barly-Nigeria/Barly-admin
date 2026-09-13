@@ -3,17 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  // Banknote,
   Boxes,
   FileSpreadsheet,
   LayoutDashboard,
-  Mail,
   Menu,
   PartyPopper,
   Receipt,
   Settings,
   Sparkles,
-  Truck,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -31,10 +28,7 @@ const NAV = [
   { href: "/catalog", label: "Catalog", icon: Boxes },
   { href: "/picks", label: "Picks", icon: Sparkles },
   { href: "/occasions", label: "Occasions", icon: PartyPopper },
-  // { href: "/cash", label: "Cash flow", icon: Banknote },
-  { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/customers", label: "Customers", icon: Users },
-  { href: "/marketing", label: "Marketing", icon: Mail },
 ];
 
 function NavLinks({
