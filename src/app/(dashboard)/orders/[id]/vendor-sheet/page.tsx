@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { adminAuthed } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/print-button";
+import type { AdminOrderDetail } from "@/lib/barly-api";
 import {
   Table,
   TableBody,
@@ -12,7 +13,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { groupByVendor, invoiceNumber, vendorFillLines } from "@/lib/invoice";
+
+function customerFirstName(c: { first_name: string; last_name: string; email: string }) {
+  return c.first_name.trim() || `${c.first_name} ${c.last_name}`.trim() || c.email;
+}
+
+function sheetDate(raw?: string) {
+  if (!raw) return "—";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "—";
+  return formatDate(date);
+}
 
 export default async function VendorSheetPage({
   params,
@@ -20,18 +31,23 @@ export default async function VendorSheetPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: {
-      customer: true,
-      product: { include: { items: { include: { item: { include: { vendor: true } } } } } },
-      lines: { include: { item: { include: { vendor: true } } } },
-    },
-  });
-  if (!order) notFound();
+  const res = await adminAuthed<AdminOrderDetail>(`/v1/admin/orders/${id}`);
 
-  const groups = groupByVendor(vendorFillLines(order));
-  const number = invoiceNumber(order);
+  if (res.status === 404) {
+    notFound();
+  }
+
+  const order = res.body?.data;
+  if (!order) {
+    notFound();
+  }
+
+  const items = order.items ?? [];
+  const pieceCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const vendorName = order.vendor?.name || "drinks.ng";
+  const vendorEmail = "orders@drinks.ng";
+  const summary =
+    order.item_summary?.trim() || items.map((item) => item.name).filter(Boolean).join(", ");
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 bg-black p-6 print:max-w-none print:p-0">
@@ -46,8 +62,11 @@ export default async function VendorSheetPage({
         <BrandLogo size="lg" />
         <div className="text-right text-sm">
           <p className="font-semibold">Vendor fulfilment sheet</p>
-          <p className="font-mono">{number}</p>
-          <p className="text-muted-foreground">{formatDate(order.createdAt)}</p>
+          <p className="font-mono">{order.display_ref}</p>
+          {order.payment?.reference ? (
+            <p className="font-mono text-muted-foreground">{order.payment.reference}</p>
+          ) : null}
+          <p className="text-muted-foreground">{sheetDate(order.created_at)}</p>
         </div>
       </header>
 
@@ -56,39 +75,36 @@ export default async function VendorSheetPage({
       </p>
 
       <p className="text-sm text-muted-foreground">
-        Event for {order.customer.name.split(" ")[0]} · {order.product.name}
+        Event for {customerFirstName(order.customer)}
+        {summary ? ` · ${summary}` : ""}
       </p>
 
-      {groups.length === 0 ? (
+      {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">No vendor SKUs on this order.</p>
       ) : (
-        groups.map((group) => (
-          <section key={group.vendorId} className="space-y-3 break-inside-avoid">
-            <h2 className="text-lg font-semibold">{group.vendorName}</h2>
-            <p className="text-sm text-muted-foreground">
-              {[group.vendorEmail, group.vendorAddress].filter(Boolean).join(" · ") || "No contact on file"}
-            </p>
-            <p className="text-sm text-muted-foreground">{group.pieceCount} pieces total</p>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
+        <section className="space-y-3 break-inside-avoid">
+          <h2 className="text-lg font-semibold">{vendorName}</h2>
+          <p className="text-sm text-muted-foreground">{vendorEmail}</p>
+          <p className="text-sm text-muted-foreground">{pieceCount} pieces total</p>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>SKU</TableHead>
+                <TableHead>Item</TableHead>
+                <TableHead className="text-right">Qty</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-mono text-xs">{item.sku || "—"}</TableCell>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {group.lines.map((line) => (
-                  <TableRow key={`${line.vendorId}-${line.sku}`}>
-                    <TableCell className="font-mono text-xs">{line.sku}</TableCell>
-                    <TableCell>{line.name}</TableCell>
-                    <TableCell className="text-right">{line.quantity}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </section>
-        ))
+              ))}
+            </TableBody>
+          </Table>
+        </section>
       )}
     </div>
   );

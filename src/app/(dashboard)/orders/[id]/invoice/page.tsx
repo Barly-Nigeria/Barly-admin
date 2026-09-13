@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
-import { naira } from "@/lib/money";
+import { adminAuthed } from "@/lib/auth";
+import { nairaFromKobo } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
-import { occasionLabel } from "@/lib/labels";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/print-button";
+import type { AdminOrderDetail } from "@/lib/barly-api";
 import {
   Table,
   TableBody,
@@ -14,11 +14,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  customerInvoiceLines,
-  customerInvoiceTotals,
-  invoiceNumber,
-} from "@/lib/invoice";
+
+function customerName(c: { first_name: string; last_name: string; email: string }) {
+  return `${c.first_name} ${c.last_name}`.trim() || c.email;
+}
+
+function invoiceDate(raw?: string) {
+  if (!raw) return "—";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "—";
+  return formatDate(date);
+}
+
+function deliveryAddress(order: AdminOrderDetail) {
+  const fromDelivery = [
+    order.delivery?.address_line,
+    [order.delivery?.city, order.delivery?.state].filter(Boolean).join(", "),
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+  if (fromDelivery) return fromDelivery;
+  const fromOrder = [
+    order.delivery_address_line || order.delivery_address,
+    [order.delivery_city, order.delivery_state].filter(Boolean).join(", "),
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+  return fromOrder || "";
+}
 
 export default async function CustomerInvoicePage({
   params,
@@ -26,19 +51,21 @@ export default async function CustomerInvoicePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: {
-      customer: true,
-      product: { include: { items: { include: { item: { include: { vendor: true } } } } } },
-      lines: { include: { item: { include: { vendor: true } } } },
-    },
-  });
-  if (!order) notFound();
+  const res = await adminAuthed<AdminOrderDetail>(`/v1/admin/orders/${id}`);
 
-  const lines = customerInvoiceLines(order);
-  const totals = customerInvoiceTotals(lines);
-  const number = invoiceNumber(order);
+  if (res.status === 404) {
+    notFound();
+  }
+
+  const order = res.body?.data;
+  if (!order) {
+    notFound();
+  }
+
+  const items = order.items ?? [];
+  const name = customerName(order.customer);
+  const address = deliveryAddress(order);
+  const summary = order.item_summary?.trim() || items.map((item) => item.name).filter(Boolean).join(", ");
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 bg-black p-6 print:max-w-none print:p-0">
@@ -53,21 +80,26 @@ export default async function CustomerInvoicePage({
         <BrandLogo size="lg" />
         <div className="text-right text-sm">
           <p className="font-semibold">Customer invoice</p>
-          <p className="font-mono">{number}</p>
-          <p className="text-muted-foreground">{formatDate(order.createdAt)}</p>
+          <p className="font-mono">{order.display_ref}</p>
+          {order.payment?.reference ? (
+            <p className="font-mono text-muted-foreground">{order.payment.reference}</p>
+          ) : null}
+          <p className="text-muted-foreground">{invoiceDate(order.created_at)}</p>
         </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 text-sm">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Bill to</p>
-          <p className="font-medium">{order.customer.name}</p>
+          <p className="font-medium">{name}</p>
           <p>{order.customer.email}</p>
         </div>
         <div className="sm:text-right">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Occasion</p>
-          <p className="font-medium">{occasionLabel(order.product.occasion)}</p>
-          <p>{order.product.name}</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {address ? "Deliver to" : "Order"}
+          </p>
+          {address ? <p className="font-medium">{address}</p> : null}
+          {summary ? <p className="text-muted-foreground">{summary}</p> : null}
         </div>
       </div>
 
@@ -81,34 +113,48 @@ export default async function CustomerInvoicePage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lines.map((line) => (
-            <TableRow key={line.id}>
-              <TableCell>
-                <p>{line.description}</p>
-                <p className="text-xs text-muted-foreground">
-                  {line.kind === "product" ? "Package" : "Extra item"}
-                </p>
+          {items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-muted-foreground">
+                No line items
               </TableCell>
-              <TableCell className="text-right">{line.quantity}</TableCell>
-              <TableCell className="text-right">{naira(line.unitPrice)}</TableCell>
-              <TableCell className="text-right">{naira(line.lineTotal)}</TableCell>
             </TableRow>
-          ))}
+          ) : (
+            items.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell>
+                  <p>{item.name}</p>
+                  {item.sku ? <p className="text-xs text-muted-foreground">{item.sku}</p> : null}
+                </TableCell>
+                <TableCell className="text-right">{item.quantity}</TableCell>
+                <TableCell className="text-right">{nairaFromKobo(item.unit_price)}</TableCell>
+                <TableCell className="text-right">{nairaFromKobo(item.total_price)}</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
 
       <dl className="ml-auto w-full max-w-xs space-y-1 text-sm">
         <div className="flex justify-between">
-          <dt>Package</dt>
-          <dd>{naira(totals.packageTotal)}</dd>
+          <dt>Subtotal</dt>
+          <dd>{nairaFromKobo(order.subtotal)}</dd>
         </div>
         <div className="flex justify-between">
-          <dt>Extras</dt>
-          <dd>{naira(totals.extrasTotal)}</dd>
+          <dt>Delivery fee</dt>
+          <dd>{nairaFromKobo(order.delivery_fee)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt>Tax</dt>
+          <dd>{nairaFromKobo(order.tax_amount)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt>Discount</dt>
+          <dd>{nairaFromKobo(order.discount_amount)}</dd>
         </div>
         <div className="flex justify-between border-t pt-2 text-base font-semibold">
           <dt>Total due</dt>
-          <dd>{naira(totals.calculatedTotal)}</dd>
+          <dd>{nairaFromKobo(order.total_amount)}</dd>
         </div>
       </dl>
     </div>
