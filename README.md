@@ -1,10 +1,8 @@
 # Barly Admin
 
-Employee admin for Barly, a drinks and celebration-packages business. Staff can review orders and customers; admins can change prices, pay vendors, and invite teammates.
+Employee admin for Barly, a drinks and celebration-packages business. Staff can review orders and customers; admins can manage catalog, picks, occasions, and teammates.
 
-Auth and team management go through **barly-api**. Catalog and orders still use the local Prisma database for now.
-
-Payouts and newsletters are recorded in the app. They are not sent to a bank or mailbox.
+All data goes through **barly-api**.
 
 ## Run locally
 
@@ -20,7 +18,6 @@ make seed
 ```bash
 cp .env.example .env
 npm install
-npx prisma migrate dev
 npm run dev
 ```
 
@@ -36,19 +33,15 @@ Open [http://localhost:4783](http://localhost:4783).
 
 These credentials are created by `make seed` in barly-api (`ADMIN_SEED_EMAIL` / `ADMIN_SEED_PASSWORD`). Invite additional Admin or Staff accounts from **Team**. Staff cannot open Team or send invites.
 
-Admins can create packages and items, pick SKUs into packages, add item photos, change prices, onboard or remove vendors, and record vendor payouts. Staff can update order status, view the catalog, and send simulated campaigns. Both roles can change their own password from **Account**.
+Admins can manage products, variants, picks, and occasions, and invite teammates. Staff can update order status, view the catalog, and email drinks.ng. Both roles can change their own password from **Account**.
 
 ## What you can do
 
-- See orders and move them from pending to fulfilled
-- Open an order breakdown, calculate the customer invoice, and print it
-- Send vendors a fulfilment sheet with SKUs and quantities only (no prices)
-- Create packages and SKUs, pick items into packages, add item photos, then change prices
-- Watch cash inflows from paid orders and outflows from payouts
-- Onboard vendors with an address and email, or remove suppliers that have no catalog SKUs
-- Pay vendors (recorded locally)
+- See paid orders and move them from paid to completed or cancelled
+- Open an order breakdown, print the customer invoice, and print a vendor sheet
+- Email drinks.ng the priced customer invoice
+- Manage catalog, picks, and occasions
 - See who joined, spend, favourite occasions/packages, and age groups
-- Send a newsletter or birthday reminders (stored as campaigns)
 - Invite admins and staff, revoke pending invites, and deactivate members
 
 Currency is Nigerian naira (₦).

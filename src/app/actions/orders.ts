@@ -23,6 +23,5 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
-  revalidatePath("/cash");
   revalidatePath("/");
 }

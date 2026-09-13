@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Cake, ShoppingBag, TrendingDown, TrendingUp, UserPlus } from "lucide-react";
+import { Cake, ShoppingBag, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormError } from "@/components/catalog-chrome";
-import { prisma } from "@/lib/prisma";
 import { adminAuthed } from "@/lib/auth";
-import { naira, nairaFromKobo } from "@/lib/money";
-import { formatDate, startOfDay } from "@/lib/dates";
+import { nairaFromKobo } from "@/lib/money";
+import { formatDate } from "@/lib/dates";
 import { StatusBadge } from "@/components/status-badge";
 import type { AdminOverview } from "@/lib/barly-api";
 
@@ -20,30 +19,7 @@ function birthdayDate(dob: string) {
 }
 
 export default async function OverviewPage() {
-  const today = startOfDay(new Date());
-
-  const [overviewRes, monthIn, monthOut, cashPosition] = await Promise.all([
-    adminAuthed<AdminOverview>("/v1/admin/overview"),
-    prisma.cashEntry.aggregate({
-      _sum: { amount: true },
-      where: {
-        type: "inflow",
-        createdAt: { gte: new Date(today.getFullYear(), today.getMonth(), 1) },
-      },
-    }),
-    prisma.cashEntry.aggregate({
-      _sum: { amount: true },
-      where: {
-        type: "outflow",
-        createdAt: { gte: new Date(today.getFullYear(), today.getMonth(), 1) },
-      },
-    }),
-    prisma.cashEntry.groupBy({
-      by: ["type"],
-      _sum: { amount: true },
-    }),
-  ]);
-
+  const overviewRes = await adminAuthed<AdminOverview>("/v1/admin/overview");
   const overview = overviewRes.body?.data;
   const loadError = !overviewRes.ok ? overviewRes.message : null;
   const todaysOrders = overview?.orders_today ?? 0;
@@ -51,39 +27,23 @@ export default async function OverviewPage() {
   const recentOrders = overview?.recent_orders ?? [];
   const upcomingBirthdays = overview?.upcoming_birthdays ?? [];
 
-  const inflows = cashPosition.find((c) => c.type === "inflow")?._sum.amount ?? 0;
-  const outflows = cashPosition.find((c) => c.type === "outflow")?._sum.amount ?? 0;
-  const position = inflows - outflows;
-
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Today at Barly</h1>
         <p className="text-sm text-muted-foreground">
-          Orders, cash, new guests, and birthdays that need a reminder.
+          Orders, new guests, and birthdays that need a reminder.
         </p>
       </div>
 
       <FormError message={loadError} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Stat
           title="Orders today"
           value={String(todaysOrders)}
           hint="Paid bookings since midnight (Lagos)"
           icon={<ShoppingBag className="size-4" />}
-        />
-        <Stat
-          title="Cash position"
-          value={naira(position)}
-          hint={`${naira(monthIn._sum.amount ?? 0)} in this month`}
-          icon={<TrendingUp className="size-4" />}
-        />
-        <Stat
-          title="Month outflows"
-          value={naira(monthOut._sum.amount ?? 0)}
-          hint="Vendor payouts and other costs"
-          icon={<TrendingDown className="size-4" />}
         />
         <Stat
           title="New guests"
@@ -131,9 +91,7 @@ export default async function OverviewPage() {
               <Cake className="size-4 text-amber-300" />
               Birthdays in 14 days
             </CardTitle>
-            <CardDescription>
-              Send reminders from Marketing so they book a package.
-            </CardDescription>
+            <CardDescription>Guests whose birthday is coming up.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {upcomingBirthdays.length === 0 ? (
