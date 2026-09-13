@@ -17,6 +17,11 @@ const styles: Record<string, string> = {
   processing: "bg-sky-500/15 text-sky-200 border-sky-500/30",
   completed: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
   failed: "bg-rose-500/15 text-rose-200 border-rose-500/30",
+  payment_failed: "bg-rose-500/15 text-rose-200 border-rose-500/30",
+  success: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
+  picked_up: "bg-sky-500/15 text-sky-200 border-sky-500/30",
+  in_transit: "bg-indigo-500/15 text-indigo-200 border-indigo-500/30",
+  booking_failed: "bg-rose-500/15 text-rose-200 border-rose-500/30",
 };
 
 export function StatusBadge({ value }: { value: string }) {

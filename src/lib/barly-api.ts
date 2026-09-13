@@ -110,6 +110,175 @@ export type CatalogProductList = CatalogListPage<CatalogProduct>;
 export type CatalogCategoryList = CatalogListPage<CatalogCategory>;
 export type CatalogAddOnList = CatalogListPage<CatalogAddOn>;
 
+export type AdminNamedRef = {
+  id: string;
+  name: string;
+};
+
+export type AdminAgeGroupStat = {
+  id: string;
+  label: string;
+  count: number;
+};
+
+export type AdminOccasionStat = {
+  id: string;
+  name: string;
+  count: number;
+};
+
+export type AdminCustomer = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  dob?: string;
+  age?: number;
+  is_active: boolean;
+  email_verified: boolean;
+  created_at: string;
+  total_spend: number;
+  favourite_occasion?: AdminNamedRef;
+  favourite_product?: AdminNamedRef;
+};
+
+export type AdminCustomerList = CatalogListPage<AdminCustomer> & {
+  age_groups: AdminAgeGroupStat[];
+  favourite_occasions: AdminOccasionStat[];
+};
+
+export type AdminCustomerOrder = {
+  id: string;
+  status: string;
+  total_amount: number;
+  currency: string;
+  created_at: string;
+  item_summary: string;
+};
+
+export type AdminCustomerDetail = AdminCustomer & {
+  orders: AdminCustomerOrder[];
+};
+
+export type AdminOrderCustomer = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+};
+
+export type AdminOrderPaymentSummary = {
+  reference: string;
+  status: string;
+  paid_at?: string;
+};
+
+export type AdminOrderDeliverySummary = {
+  status: string;
+  courier?: string;
+  tracking_url?: string;
+  provider_reference?: string;
+};
+
+export type AdminOrderVendor = {
+  id: string;
+  name: string;
+};
+
+export type AdminOrder = {
+  id: string;
+  display_ref: string;
+  status: string;
+  total_amount: number;
+  currency: string;
+  created_at: string;
+  item_summary: string;
+  vendor_dispatch_count?: number;
+  customer: AdminOrderCustomer;
+  payment?: AdminOrderPaymentSummary | null;
+  delivery?: AdminOrderDeliverySummary | null;
+  vendor: AdminOrderVendor;
+};
+
+export type AdminOrderList = CatalogListPage<AdminOrder>;
+
+export type AdminOrderItem = {
+  id: string;
+  item_type: string;
+  name: string;
+  sku?: string;
+  unit_price: number;
+  quantity: number;
+  total_price: number;
+  currency: string;
+};
+
+export type AdminPayment = {
+  id: string;
+  provider: string;
+  reference: string;
+  status: string;
+  amount: number;
+  currency: string;
+  paid_at?: string;
+  created_at?: string;
+};
+
+export type AdminDelivery = {
+  id: string;
+  provider?: string;
+  status: string;
+  recipient_name?: string;
+  recipient_phone?: string;
+  address_line?: string;
+  city?: string;
+  state?: string;
+  fee: number;
+  currency?: string;
+  quote_reference?: string;
+  courier?: string;
+  provider_reference?: string;
+  tracking_url?: string;
+  booking_error?: string;
+  booked_at?: string;
+  completed_at?: string;
+  cancelled_at?: string;
+};
+
+export type AdminVendorDispatch = {
+  id: string;
+  vendor_id: string;
+  vendor_name: string;
+  vendor_email?: string;
+  item_count: number;
+  summary: string;
+  sent_at: string;
+  sent_by?: string;
+};
+
+export type AdminOrderDetail = Omit<AdminOrder, "delivery"> & {
+  subtotal: number;
+  delivery_fee: number;
+  tax_amount: number;
+  discount_amount: number;
+  notes?: string;
+  promo_code?: string;
+  delivery_address?: string;
+  delivery_recipient_name?: string;
+  delivery_recipient_phone?: string;
+  delivery_address_line?: string;
+  delivery_city?: string;
+  delivery_state?: string;
+  delivery_quote_reference?: string;
+  updated_at?: string;
+  delivery?: AdminDelivery | null;
+  items: AdminOrderItem[];
+  payments: AdminPayment[];
+  vendor_dispatches: AdminVendorDispatch[];
+};
+
 export type CatalogImportStatus =
   | "awaiting_upload"
   | "queued"

@@ -5,3 +5,8 @@ export function naira(amount: number) {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
+/** Format API money fields stored in kobo (minor units). */
+export function nairaFromKobo(kobo: number) {
+  return naira((kobo ?? 0) / 100);
+}

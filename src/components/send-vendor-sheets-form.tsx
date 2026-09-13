@@ -31,7 +31,7 @@ export function SendVendorSheetsForm({
         start(async () => {
           try {
             await sendVendorSheets(orderId, data);
-            toast.success("Vendor sheets sent (no prices included)");
+            toast.success("Invoice emailed to drinks.ng");
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Could not send");
           }
@@ -39,7 +39,7 @@ export function SendVendorSheetsForm({
       }}
     >
       <p className="text-sm text-muted-foreground">
-        Vendors receive quantities and SKUs only. Customer prices stay on Barly.
+        drinks.ng is emailed the customer invoice PDF for this order.
       </p>
       <ul className="space-y-2">
         {vendors.map((vendor) => (
@@ -65,7 +65,7 @@ export function SendVendorSheetsForm({
         ))}
       </ul>
       <Button type="submit" disabled={pending}>
-        {pending ? "Sending…" : "Send sheets to vendors"}
+        {pending ? "Sending…" : "Email invoice to drinks.ng"}
       </Button>
     </form>
   );
