@@ -204,6 +204,23 @@ export type AdminOrder = {
 
 export type AdminOrderList = CatalogListPage<AdminOrder>;
 
+export type AdminBirthday = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  dob: string;
+  in_days: number;
+  favourite_occasion?: { id: string; name: string } | null;
+};
+
+export type AdminOverview = {
+  orders_today: number;
+  new_guests_14d: number;
+  recent_orders: AdminOrder[];
+  upcoming_birthdays: AdminBirthday[];
+};
+
 export type AdminOrderItem = {
   id: string;
   item_type: string;

@@ -1,29 +1,29 @@
 import Link from "next/link";
 import { Cake, ShoppingBag, TrendingDown, TrendingUp, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormError } from "@/components/catalog-chrome";
 import { prisma } from "@/lib/prisma";
-import { naira } from "@/lib/money";
-import { daysUntilBirthday, formatDate, startOfDay } from "@/lib/dates";
-import { occasionLabel } from "@/lib/labels";
+import { adminAuthed } from "@/lib/auth";
+import { naira, nairaFromKobo } from "@/lib/money";
+import { formatDate, startOfDay } from "@/lib/dates";
 import { StatusBadge } from "@/components/status-badge";
+import type { AdminOverview } from "@/lib/barly-api";
+
+function customerName(c: { first_name: string; last_name: string; email: string }) {
+  return `${c.first_name} ${c.last_name}`.trim() || c.email;
+}
+
+function birthdayDate(dob: string) {
+  const date = new Date(`${dob}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dob;
+  return formatDate(date);
+}
 
 export default async function OverviewPage() {
   const today = startOfDay(new Date());
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [
-    todaysOrders,
-    monthIn,
-    monthOut,
-    newSignups,
-    recentOrders,
-    customers,
-    cashPosition,
-  ] = await Promise.all([
-    prisma.order.count({
-      where: { createdAt: { gte: today, lt: tomorrow } },
-    }),
+  const [overviewRes, monthIn, monthOut, cashPosition] = await Promise.all([
+    adminAuthed<AdminOverview>("/v1/admin/overview"),
     prisma.cashEntry.aggregate({
       _sum: { amount: true },
       where: {
@@ -38,29 +38,22 @@ export default async function OverviewPage() {
         createdAt: { gte: new Date(today.getFullYear(), today.getMonth(), 1) },
       },
     }),
-    prisma.customer.count({
-      where: { joinedAt: { gte: new Date(today.getTime() - 14 * 86_400_000) } },
-    }),
-    prisma.order.findMany({
-      take: 6,
-      orderBy: { createdAt: "desc" },
-      include: { customer: true, product: true },
-    }),
-    prisma.customer.findMany(),
     prisma.cashEntry.groupBy({
       by: ["type"],
       _sum: { amount: true },
     }),
   ]);
 
+  const overview = overviewRes.body?.data;
+  const loadError = !overviewRes.ok ? overviewRes.message : null;
+  const todaysOrders = overview?.orders_today ?? 0;
+  const newSignups = overview?.new_guests_14d ?? 0;
+  const recentOrders = overview?.recent_orders ?? [];
+  const upcomingBirthdays = overview?.upcoming_birthdays ?? [];
+
   const inflows = cashPosition.find((c) => c.type === "inflow")?._sum.amount ?? 0;
   const outflows = cashPosition.find((c) => c.type === "outflow")?._sum.amount ?? 0;
   const position = inflows - outflows;
-
-  const upcomingBirthdays = customers
-    .map((c) => ({ ...c, inDays: daysUntilBirthday(c.birthday) }))
-    .filter((c) => c.inDays <= 14)
-    .sort((a, b) => a.inDays - b.inDays);
 
   return (
     <div className="space-y-8">
@@ -71,11 +64,13 @@ export default async function OverviewPage() {
         </p>
       </div>
 
+      <FormError message={loadError} />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           title="Orders today"
           value={String(todaysOrders)}
-          hint="Created since midnight"
+          hint="Paid bookings since midnight (Lagos)"
           icon={<ShoppingBag className="size-4" />}
         />
         <Stat
@@ -115,14 +110,14 @@ export default async function OverviewPage() {
                   className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 hover:bg-muted/40"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{order.customer.name}</p>
+                    <p className="truncate text-sm font-medium">{customerName(order.customer)}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {order.product.name} · {occasionLabel(order.product.occasion)}
+                      {order.item_summary || order.display_ref}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <StatusBadge value={order.status} />
-                    <span className="text-xs">{naira(order.total)}</span>
+                    <span className="text-xs">{nairaFromKobo(order.total_amount)}</span>
                   </div>
                 </Link>
               ))
@@ -147,20 +142,24 @@ export default async function OverviewPage() {
               </p>
             ) : (
               upcomingBirthdays.map((c) => (
-                <div
+                <Link
                   key={c.id}
-                  className="flex items-center justify-between rounded-lg border px-3 py-2"
+                  href={`/customers/${c.id}`}
+                  className="flex items-center justify-between rounded-lg border px-3 py-2 hover:bg-muted/40"
                 >
                   <div>
-                    <p className="text-sm font-medium">{c.name}</p>
+                    <p className="text-sm font-medium">
+                      {customerName({ first_name: c.first_name, last_name: c.last_name, email: c.email })}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDate(c.birthday)} · {occasionLabel(c.favoriteOccasion)}
+                      {birthdayDate(c.dob)}
+                      {c.favourite_occasion?.name ? ` · ${c.favourite_occasion.name}` : ""}
                     </p>
                   </div>
                   <span className="text-xs text-amber-200">
-                    {c.inDays === 0 ? "Today" : `${c.inDays}d`}
+                    {c.in_days === 0 ? "Today" : `${c.in_days}d`}
                   </span>
-                </div>
+                </Link>
               ))
             )}
           </CardContent>
