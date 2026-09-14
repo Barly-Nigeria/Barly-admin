@@ -127,7 +127,12 @@ export async function adminAuthed<T>(
     }
   }
   if (!access) {
-    throw new Error("Unauthorized");
+    return {
+      status: 401,
+      ok: false,
+      body: null,
+      message: "Unauthorized",
+    };
   }
 
   let res = await adminApi<T>(path, { ...options, accessToken: access });
