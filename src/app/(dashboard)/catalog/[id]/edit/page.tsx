@@ -12,6 +12,7 @@ import {
 import { FormError, PageHeader } from "@/components/catalog-chrome";
 import { deleteVariantAction } from "@/app/actions/catalog";
 import type {
+  AdminVendorList,
   CatalogAddOnList,
   CatalogCategoryList,
   CatalogOccasion,
@@ -29,12 +30,13 @@ export default async function ProductEditPage({
   const { id } = await params;
   const { error } = await searchParams;
 
-  const [productRes, categoriesRes, picksRes, occasionsRes, addOnsRes] = await Promise.all([
+  const [productRes, categoriesRes, picksRes, occasionsRes, addOnsRes, vendorsRes] = await Promise.all([
     adminAuthed<CatalogProductDetail>(`/v1/admin/products/${id}`),
     adminAuthed<CatalogCategoryList>("/v1/admin/categories?limit=100"),
     adminAuthed<CatalogPick[]>("/v1/admin/picks"),
     adminAuthed<CatalogOccasion[]>("/v1/admin/occasions"),
     adminAuthed<CatalogAddOnList>("/v1/admin/add-ons?limit=100"),
+    adminAuthed<AdminVendorList>("/v1/admin/vendors?limit=100&active=true"),
   ]);
 
   if (productRes.status === 404) {
@@ -46,6 +48,7 @@ export default async function ProductEditPage({
   const picks = picksRes.body?.data ?? [];
   const occasions = occasionsRes.body?.data ?? [];
   const addOns = addOnsRes.body?.data?.items ?? [];
+  const vendors = vendorsRes.body?.data?.items ?? [];
   const loadError = error || (!productRes.ok ? productRes.message : null);
 
   if (!product) {
@@ -82,7 +85,7 @@ export default async function ProductEditPage({
           <CardDescription>Inventory SKUs. Prices are in naira (same integer the API stores).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <CreateVariantForm productId={product.id} />
+          <CreateVariantForm productId={product.id} vendors={vendors} />
           {product.variants.length === 0 ? (
             <p className="text-sm text-muted-foreground">No variants yet.</p>
           ) : (
@@ -100,7 +103,7 @@ export default async function ProductEditPage({
                       size="sm"
                     />
                   </div>
-                  <EditVariantRow variant={variant} productId={product.id} />
+                  <EditVariantRow variant={variant} productId={product.id} vendors={vendors} />
                 </div>
               ))}
             </div>

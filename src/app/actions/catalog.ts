@@ -58,16 +58,25 @@ async function loadListPage<T>(path: string): Promise<T> {
   return res.body.data;
 }
 
-export async function loadProductsPage(page: number) {
-  return loadListPage<CatalogProductList>(`/v1/admin/products?page=${page}&limit=${CATALOG_LIST_PAGE_SIZE}`);
+export async function loadProductsPage(page: number, q = "") {
+  const params = new URLSearchParams({ page: String(page), limit: String(CATALOG_LIST_PAGE_SIZE) });
+  const query = q.trim();
+  if (query) params.set("q", query);
+  return loadListPage<CatalogProductList>(`/v1/admin/products?${params.toString()}`);
 }
 
-export async function loadCategoriesPage(page: number) {
-  return loadListPage<CatalogCategoryList>(`/v1/admin/categories?page=${page}&limit=${CATALOG_LIST_PAGE_SIZE}`);
+export async function loadCategoriesPage(page: number, q = "") {
+  const params = new URLSearchParams({ page: String(page), limit: String(CATALOG_LIST_PAGE_SIZE) });
+  const query = q.trim();
+  if (query) params.set("q", query);
+  return loadListPage<CatalogCategoryList>(`/v1/admin/categories?${params.toString()}`);
 }
 
-export async function loadAddOnsPage(page: number) {
-  return loadListPage<CatalogAddOnList>(`/v1/admin/add-ons?page=${page}&limit=${CATALOG_LIST_PAGE_SIZE}`);
+export async function loadAddOnsPage(page: number, q = "") {
+  const params = new URLSearchParams({ page: String(page), limit: String(CATALOG_LIST_PAGE_SIZE) });
+  const query = q.trim();
+  if (query) params.set("q", query);
+  return loadListPage<CatalogAddOnList>(`/v1/admin/add-ons?${params.toString()}`);
 }
 
 export type CatalogImagePresign = {
@@ -219,8 +228,10 @@ export async function createVariantAction(formData: FormData) {
       attribute_name: opt(formData, "attribute_name"),
       attribute_value: opt(formData, "attribute_value"),
       price: intOrUndef(formData, "price"),
+      cost_price: intOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
       weight_kg: intOrUndef(formData, "weight_kg"),
+      vendor_id: opt(formData, "vendor_id"),
       is_active: bool(formData, "is_active"),
       currency: "NGN",
     },
@@ -242,8 +253,10 @@ export async function updateVariantAction(formData: FormData) {
       attribute_name: opt(formData, "attribute_name"),
       attribute_value: opt(formData, "attribute_value"),
       price: intOrUndef(formData, "price"),
+      cost_price: intOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
       weight_kg: intOrUndef(formData, "weight_kg"),
+      vendor_id: opt(formData, "vendor_id"),
       is_active: bool(formData, "is_active"),
     },
     `/catalog/${productId}/edit`,
@@ -285,7 +298,9 @@ export async function createAddOnAction(formData: FormData) {
       description: opt(formData, "description"),
       image_url: opt(formData, "image_url"),
       price: intOrUndef(formData, "price"),
+      cost_price: intOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
+      vendor_id: opt(formData, "vendor_id"),
       is_active: bool(formData, "is_active"),
       currency: "NGN",
     },
@@ -307,7 +322,9 @@ export async function updateAddOnAction(formData: FormData) {
       description: opt(formData, "description"),
       image_url: opt(formData, "image_url"),
       price: intOrUndef(formData, "price"),
+      cost_price: intOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
+      vendor_id: opt(formData, "vendor_id"),
       is_active: bool(formData, "is_active"),
     },
     `/catalog/add-ons/${id}/edit`,

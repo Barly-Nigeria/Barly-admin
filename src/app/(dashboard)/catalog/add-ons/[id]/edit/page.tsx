@@ -3,7 +3,7 @@ import { adminAuthed } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditAddOnForm } from "@/components/catalog-forms";
 import { FormError, PageHeader } from "@/components/catalog-chrome";
-import type { CatalogAddOn } from "@/lib/barly-api";
+import type { AdminVendorList, CatalogAddOn } from "@/lib/barly-api";
 
 export default async function AddOnEditPage({
   params,
@@ -14,13 +14,17 @@ export default async function AddOnEditPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const res = await adminAuthed<CatalogAddOn>(`/v1/admin/add-ons/${id}`);
+  const [res, vendorsRes] = await Promise.all([
+    adminAuthed<CatalogAddOn>(`/v1/admin/add-ons/${id}`),
+    adminAuthed<AdminVendorList>("/v1/admin/vendors?limit=100&active=true"),
+  ]);
 
   if (res.status === 404) {
     notFound();
   }
 
   const addOn = res.body?.data;
+  const vendors = vendorsRes.body?.data?.items ?? [];
   const loadError = error || (!res.ok ? res.message : null);
 
   if (!addOn) {
@@ -45,7 +49,7 @@ export default async function AddOnEditPage({
           <CardDescription>Archive from the view page to hide this from the guest store.</CardDescription>
         </CardHeader>
         <CardContent>
-          <EditAddOnForm addOn={addOn} />
+          <EditAddOnForm addOn={addOn} vendors={vendors} />
         </CardContent>
       </Card>
     </div>

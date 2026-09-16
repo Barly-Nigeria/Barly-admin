@@ -101,11 +101,18 @@ function InfiniteTable<T extends { id: string }>({
   );
 }
 
-export function ProductsInfiniteTable({ initial }: { initial: CatalogProductList }) {
+export function ProductsInfiniteTable({
+  initial,
+  q = "",
+}: {
+  initial: CatalogProductList;
+  q?: string;
+}) {
   return (
     <InfiniteTable
+      key={q}
       initial={initial}
-      loadPage={loadProductsPage}
+      loadPage={(page) => loadProductsPage(page, q)}
       colSpan={4}
       header={
         <TableRow>
@@ -134,11 +141,18 @@ export function ProductsInfiniteTable({ initial }: { initial: CatalogProductList
   );
 }
 
-export function CategoriesInfiniteTable({ initial }: { initial: CatalogCategoryList }) {
+export function CategoriesInfiniteTable({
+  initial,
+  q = "",
+}: {
+  initial: CatalogCategoryList;
+  q?: string;
+}) {
   return (
     <InfiniteTable
+      key={q}
       initial={initial}
-      loadPage={loadCategoriesPage}
+      loadPage={(page) => loadCategoriesPage(page, q)}
       colSpan={3}
       header={
         <TableRow>
@@ -164,11 +178,18 @@ export function CategoriesInfiniteTable({ initial }: { initial: CatalogCategoryL
   );
 }
 
-export function AddOnsInfiniteTable({ initial }: { initial: CatalogAddOnList }) {
+export function AddOnsInfiniteTable({
+  initial,
+  q = "",
+}: {
+  initial: CatalogAddOnList;
+  q?: string;
+}) {
   return (
     <InfiniteTable
+      key={q}
       initial={initial}
-      loadPage={loadAddOnsPage}
+      loadPage={(page) => loadAddOnsPage(page, q)}
       colSpan={4}
       header={
         <TableRow>

@@ -11,6 +11,7 @@ import {
   Receipt,
   Settings,
   Sparkles,
+  Truck,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/orders", label: "Orders", icon: Receipt },
   { href: "/invoices", label: "Invoices", icon: FileSpreadsheet },
   { href: "/catalog", label: "Catalog", icon: Boxes },
+  { href: "/vendors", label: "Vendors", icon: Truck },
   { href: "/picks", label: "Picks", icon: Sparkles },
   { href: "/occasions", label: "Occasions", icon: PartyPopper },
   { href: "/customers", label: "Customers", icon: Users },

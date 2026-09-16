@@ -1,6 +1,8 @@
+import { adminAuthed } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateAddOnForm } from "@/components/catalog-forms";
 import { FormError, PageHeader } from "@/components/catalog-chrome";
+import type { AdminVendorList } from "@/lib/barly-api";
 
 export default async function NewAddOnPage({
   searchParams,
@@ -8,6 +10,8 @@ export default async function NewAddOnPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const vendorsRes = await adminAuthed<AdminVendorList>("/v1/admin/vendors?limit=100&active=true");
+  const vendors = vendorsRes.body?.data?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -23,7 +27,7 @@ export default async function NewAddOnPage({
           <CardDescription>Price is in naira (same integer the API stores).</CardDescription>
         </CardHeader>
         <CardContent>
-          <CreateAddOnForm />
+          <CreateAddOnForm vendors={vendors} />
         </CardContent>
       </Card>
     </div>
