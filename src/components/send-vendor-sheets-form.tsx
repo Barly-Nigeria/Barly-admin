@@ -17,7 +17,7 @@ export function SendVendorSheetsForm({
   if (vendors.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        This order has no SKUs mapped to a vendor yet.
+        This order has no SKUs mapped to a vendor yet. Assign vendors on catalog variants/add-ons.
       </p>
     );
   }
@@ -31,7 +31,7 @@ export function SendVendorSheetsForm({
         start(async () => {
           try {
             await sendVendorSheets(orderId, data);
-            toast.success("Invoice emailed to drinks.ng");
+            toast.success("Vendor sheet emailed");
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Could not send");
           }
@@ -39,7 +39,7 @@ export function SendVendorSheetsForm({
       }}
     >
       <p className="text-sm text-muted-foreground">
-        drinks.ng is emailed the customer invoice PDF for this order.
+        Selected suppliers are emailed the customer invoice PDF for this order.
       </p>
       <ul className="space-y-2">
         {vendors.map((vendor) => (
@@ -65,7 +65,7 @@ export function SendVendorSheetsForm({
         ))}
       </ul>
       <Button type="submit" disabled={pending}>
-        {pending ? "Sending…" : "Email invoice to drinks.ng"}
+        {pending ? "Sending…" : "Email vendor sheets"}
       </Button>
     </form>
   );

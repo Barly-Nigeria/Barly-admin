@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type {
+  AdminVendor,
   CatalogAddOn,
   CatalogCategory,
   CatalogOccasion,
@@ -243,29 +244,33 @@ export function EditCategoryForm({ category }: { category: CatalogCategory }) {
   );
 }
 
-export function CreateAddOnForm() {
+export function CreateAddOnForm({ vendors = [] }: { vendors?: AdminVendor[] }) {
   return (
-    <form action={createAddOnAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={createAddOnAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
       <Field name="name" label="Name" required />
       <Field name="slug" label="Slug" placeholder="auto from name" />
       <Field name="price" label="Price (NGN)" type="number" required />
+      <Field name="cost_price" label="Cost (NGN)" type="number" />
       <Field name="stock_quantity" label="Stock" type="number" />
-      <Field name="image_url" label="Image URL" className="sm:col-span-2" />
+      <VendorSelect vendors={vendors} />
+      <CatalogImageField name="image_url" inputId="add-on-image" />
       <Check name="is_active" label="Active" defaultChecked />
       <FormActions submit="Create add-on" pending="Creating…" cancelHref="/catalog/add-ons" />
     </form>
   );
 }
 
-export function EditAddOnForm({ addOn }: { addOn: CatalogAddOn }) {
+export function EditAddOnForm({ addOn, vendors = [] }: { addOn: CatalogAddOn; vendors?: AdminVendor[] }) {
   return (
-    <form action={updateAddOnAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={updateAddOnAction} onSubmit={preventSubmitWhileUploading} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="id" value={addOn.id} />
       <Field name="name" label="Name" defaultValue={addOn.name} required />
       <Field name="slug" label="Slug" defaultValue={addOn.slug} />
       <Field name="price" label="Price (NGN)" type="number" defaultValue={String(addOn.price)} />
+      <Field name="cost_price" label="Cost (NGN)" type="number" defaultValue={String(addOn.cost_price ?? 0)} />
       <Field name="stock_quantity" label="Stock" type="number" defaultValue={String(addOn.stock_quantity)} />
-      <Field name="image_url" label="Image URL" defaultValue={addOn.image_url ?? ""} className="sm:col-span-2" />
+      <VendorSelect vendors={vendors} defaultValue={addOn.vendor_id ?? undefined} />
+      <CatalogImageField name="image_url" inputId="add-on-image" initialUrl={addOn.image_url} />
       <Check name="is_active" label="Active" defaultChecked={addOn.is_active} />
       <FormActions submit="Save" pending="Saving…" cancelHref={`/catalog/add-ons/${addOn.id}`} />
     </form>
@@ -312,7 +317,13 @@ export function ProductEditorForm({
   );
 }
 
-export function CreateVariantForm({ productId }: { productId: string }) {
+export function CreateVariantForm({
+  productId,
+  vendors = [],
+}: {
+  productId: string;
+  vendors?: AdminVendor[];
+}) {
   return (
     <form action={createVariantAction} className="grid gap-3 sm:grid-cols-3">
       <input type="hidden" name="product_id" value={productId} />
@@ -320,8 +331,10 @@ export function CreateVariantForm({ productId }: { productId: string }) {
       <Field name="attribute_name" label="Attribute" placeholder="Pack Size" required />
       <Field name="attribute_value" label="Value" placeholder="6-Pack" required />
       <Field name="price" label="Price (NGN)" type="number" required />
+      <Field name="cost_price" label="Cost (NGN)" type="number" />
       <Field name="stock_quantity" label="Stock" type="number" />
       <Field name="weight_kg" label="Weight (kg)" type="number" step="0.01" />
+      <VendorSelect vendors={vendors} />
       <Check name="is_active" label="Active" defaultChecked />
       <div className="sm:col-span-3">
         <Submit label="Add variant" pendingLabel="Adding…" />
@@ -330,7 +343,15 @@ export function CreateVariantForm({ productId }: { productId: string }) {
   );
 }
 
-export function EditVariantRow({ variant, productId }: { variant: CatalogVariant; productId: string }) {
+export function EditVariantRow({
+  variant,
+  productId,
+  vendors = [],
+}: {
+  variant: CatalogVariant;
+  productId: string;
+  vendors?: AdminVendor[];
+}) {
   return (
     <form action={updateVariantAction} className="grid gap-2 sm:grid-cols-8 sm:items-end">
       <input type="hidden" name="id" value={variant.id} />
@@ -339,11 +360,40 @@ export function EditVariantRow({ variant, productId }: { variant: CatalogVariant
       <Field name="attribute_name" label="Attribute" defaultValue={variant.attribute_name} />
       <Field name="attribute_value" label="Value" defaultValue={variant.attribute_value} />
       <Field name="price" label="Price" type="number" defaultValue={String(variant.price)} />
+      <Field name="cost_price" label="Cost" type="number" defaultValue={String(variant.cost_price ?? 0)} />
       <Field name="stock_quantity" label="Stock" type="number" defaultValue={String(variant.stock_quantity)} />
       <Field name="weight_kg" label="Kg" type="number" step="0.01" defaultValue={String(variant.weight_kg)} />
+      <VendorSelect vendors={vendors} defaultValue={variant.vendor_id ?? undefined} />
       <Check name="is_active" label="Active" defaultChecked={variant.is_active} />
       <Submit label="Save" pendingLabel="Saving…" size="sm" variant="outline" />
     </form>
+  );
+}
+
+function VendorSelect({
+  vendors,
+  defaultValue,
+}: {
+  vendors: AdminVendor[];
+  defaultValue?: string;
+}) {
+  return (
+    <label className="grid gap-1 text-sm">
+      <Label htmlFor="vendor_id">Vendor</Label>
+      <select
+        id="vendor_id"
+        name="vendor_id"
+        defaultValue={defaultValue ?? ""}
+        className="h-8 rounded-lg border bg-background px-2 text-sm"
+      >
+        <option value="">Unassigned</option>
+        {vendors.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

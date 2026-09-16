@@ -264,22 +264,25 @@ export default async function OrderDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Send to drinks.ng</CardTitle>
+          <CardTitle>Send vendor sheets</CardTitle>
           <CardDescription>
-            Emails the customer invoice PDF to drinks.ng and records the dispatch.
+            Emails the customer invoice PDF to selected suppliers and records the dispatch.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <SendVendorSheetsForm
             orderId={order.id}
-            vendors={[
-              {
-                id: "drinks-ng",
-                name: "drinks.ng",
-                email: "orders@drinks.ng",
-                pieceCount,
-              },
-            ]}
+            vendors={(order.vendors?.length
+              ? order.vendors
+              : order.vendor?.id
+                ? [order.vendor]
+                : []
+            ).map((v) => ({
+              id: v.id,
+              name: v.name,
+              email: v.email ?? "",
+              pieceCount,
+            }))}
           />
           {dispatches.length > 0 ? (
             <TableShell>

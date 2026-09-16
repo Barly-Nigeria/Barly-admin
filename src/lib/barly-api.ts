@@ -68,11 +68,13 @@ export type CatalogVariant = {
   attribute_name: string;
   attribute_value: string;
   price: number;
+  cost_price?: number;
   currency: string;
   stock_quantity: number;
   sort_order: number;
   weight_kg: number;
   is_active: boolean;
+  vendor_id?: string | null;
 };
 
 export type CatalogAddOn = {
@@ -82,11 +84,13 @@ export type CatalogAddOn = {
   description?: string | null;
   image_url?: string | null;
   price: number;
+  cost_price?: number;
   currency: string;
   stock_quantity: number;
   is_active: boolean;
   product_id?: string | null;
   variant_id?: string | null;
+  vendor_id?: string | null;
 };
 
 export type CatalogProductDetail = CatalogProduct & {
@@ -185,6 +189,7 @@ export type AdminOrderDeliverySummary = {
 export type AdminOrderVendor = {
   id: string;
   name: string;
+  email?: string;
 };
 
 export type AdminOrder = {
@@ -294,6 +299,58 @@ export type AdminOrderDetail = Omit<AdminOrder, "delivery"> & {
   items: AdminOrderItem[];
   payments: AdminPayment[];
   vendor_dispatches: AdminVendorDispatch[];
+  vendors?: AdminOrderVendor[];
+};
+
+export type AdminVendor = {
+  id: string;
+  name: string;
+  category: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  bank_code?: string;
+  account_number?: string;
+  account_name?: string;
+  has_recipient: boolean;
+  balance_due: number;
+  available_to_pay: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminVendorList = CatalogListPage<AdminVendor> & {
+  total_balance_due: number;
+};
+
+export type AdminBank = {
+  name: string;
+  code: string;
+};
+
+export type AdminVendorPayout = {
+  id: string;
+  vendor_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  reference: string;
+  paystack_transfer_code?: string;
+  failure_reason?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminVendorLedgerEntry = {
+  id: string;
+  vendor_id: string;
+  order_id: string;
+  order_item_id: string;
+  amount: number;
+  currency: string;
+  created_at: string;
 };
 
 export type CatalogImportStatus =
