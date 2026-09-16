@@ -49,7 +49,6 @@ export function CatalogImportForm() {
           method: "PUT",
           headers: {
             "Content-Type": "text/csv",
-            ...(created.data.required_headers ?? {}),
           },
           body: file,
         });

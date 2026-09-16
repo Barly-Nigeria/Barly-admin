@@ -148,7 +148,6 @@ function CatalogImageField({
         method: "PUT",
         headers: {
           "Content-Type": file.type,
-          ...signed.data.required_headers,
         },
         body: file,
       });
