@@ -20,6 +20,7 @@ import {
   type CatalogProductList,
   type CatalogVariant,
 } from "@/lib/barly-api";
+import { nairaToKobo } from "@/lib/money";
 
 function opt(formData: FormData, key: string) {
   const value = String(formData.get(key) ?? "").trim();
@@ -35,6 +36,12 @@ function intOrUndef(formData: FormData, key: string) {
   if (raw === "") return undefined;
   const n = Number(raw);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/** Form money fields are naira majors; API stores kobo. */
+function koboOrUndef(formData: FormData, key: string) {
+  const n = intOrUndef(formData, key);
+  return n === undefined ? undefined : nairaToKobo(n);
 }
 
 function fail(path: string, message: string): never {
@@ -227,8 +234,8 @@ export async function createVariantAction(formData: FormData) {
       sku: opt(formData, "sku"),
       attribute_name: opt(formData, "attribute_name"),
       attribute_value: opt(formData, "attribute_value"),
-      price: intOrUndef(formData, "price"),
-      cost_price: intOrUndef(formData, "cost_price"),
+      price: koboOrUndef(formData, "price"),
+      cost_price: koboOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
       weight_kg: intOrUndef(formData, "weight_kg"),
       vendor_id: opt(formData, "vendor_id"),
@@ -252,8 +259,8 @@ export async function updateVariantAction(formData: FormData) {
       sku: opt(formData, "sku"),
       attribute_name: opt(formData, "attribute_name"),
       attribute_value: opt(formData, "attribute_value"),
-      price: intOrUndef(formData, "price"),
-      cost_price: intOrUndef(formData, "cost_price"),
+      price: koboOrUndef(formData, "price"),
+      cost_price: koboOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
       weight_kg: intOrUndef(formData, "weight_kg"),
       vendor_id: opt(formData, "vendor_id"),
@@ -297,8 +304,8 @@ export async function createAddOnAction(formData: FormData) {
       slug: opt(formData, "slug"),
       description: opt(formData, "description"),
       image_url: opt(formData, "image_url"),
-      price: intOrUndef(formData, "price"),
-      cost_price: intOrUndef(formData, "cost_price"),
+      price: koboOrUndef(formData, "price"),
+      cost_price: koboOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
       vendor_id: opt(formData, "vendor_id"),
       is_active: bool(formData, "is_active"),
@@ -321,8 +328,8 @@ export async function updateAddOnAction(formData: FormData) {
       slug: opt(formData, "slug"),
       description: opt(formData, "description"),
       image_url: opt(formData, "image_url"),
-      price: intOrUndef(formData, "price"),
-      cost_price: intOrUndef(formData, "cost_price"),
+      price: koboOrUndef(formData, "price"),
+      cost_price: koboOrUndef(formData, "cost_price"),
       stock_quantity: intOrUndef(formData, "stock_quantity"),
       vendor_id: opt(formData, "vendor_id"),
       is_active: bool(formData, "is_active"),
@@ -364,7 +371,7 @@ export async function createPickAction(formData: FormData) {
       name: opt(formData, "name"),
       sub_text: opt(formData, "sub_text"),
       image_url: opt(formData, "image_url"),
-      starting_price: intOrUndef(formData, "starting_price"),
+      starting_price: koboOrUndef(formData, "starting_price"),
       tags,
       is_active: bool(formData, "is_active"),
       description: String(formData.get("description") ?? ""),
@@ -389,7 +396,7 @@ export async function updatePickAction(formData: FormData) {
       name: opt(formData, "name"),
       sub_text: opt(formData, "sub_text"),
       image_url: opt(formData, "image_url"),
-      starting_price: intOrUndef(formData, "starting_price"),
+      starting_price: koboOrUndef(formData, "starting_price"),
       tags,
       is_active: bool(formData, "is_active"),
       description: String(formData.get("description") ?? ""),
@@ -580,4 +587,49 @@ export async function getCatalogImportErrors(
     return { ok: false, message: res.message || "Could not load import errors" };
   }
   return { ok: true, data: res.body.data };
+}
+
+async function bulkDeactivate(
+  path: string,
+  ids: string[],
+  revalidate: string[],
+): Promise<{ ok: boolean; message?: string }> {
+  await requireSession();
+  if (ids.length === 0) {
+    return { ok: false, message: "Select at least one item" };
+  }
+  const res = await adminAuthed<{ deactivated: number }>(path, {
+    method: "POST",
+    body: { ids },
+  });
+  if (!res.ok) {
+    return { ok: false, message: res.message || "Could not deactivate" };
+  }
+  for (const p of revalidate) {
+    revalidatePath(p);
+  }
+  return { ok: true };
+}
+
+export async function bulkArchiveProductsAction(ids: string[]) {
+  return bulkDeactivate("/v1/admin/products/bulk-deactivate", ids, ["/catalog"]);
+}
+
+export async function bulkArchiveCategoriesAction(ids: string[]) {
+  return bulkDeactivate("/v1/admin/categories/bulk-deactivate", ids, [
+    "/catalog",
+    "/catalog/categories",
+  ]);
+}
+
+export async function bulkArchiveAddOnsAction(ids: string[]) {
+  return bulkDeactivate("/v1/admin/add-ons/bulk-deactivate", ids, ["/catalog", "/catalog/add-ons"]);
+}
+
+export async function bulkArchivePicksAction(ids: string[]) {
+  return bulkDeactivate("/v1/admin/picks/bulk-deactivate", ids, ["/picks", "/catalog"]);
+}
+
+export async function bulkArchiveOccasionsAction(ids: string[]) {
+  return bulkDeactivate("/v1/admin/occasions/bulk-deactivate", ids, ["/occasions", "/catalog"]);
 }

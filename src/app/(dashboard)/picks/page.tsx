@@ -1,18 +1,9 @@
 import Link from "next/link";
 import { adminAuthed } from "@/lib/auth";
-import { naira } from "@/lib/money";
-import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { CatalogImage, FormError, PageHeader, TableShell } from "@/components/catalog-chrome";
+import { FormError, PageHeader } from "@/components/catalog-chrome";
+import { PicksBulkTable } from "@/components/picks-bulk-table";
 import type { CatalogPick } from "@/lib/barly-api";
 
 export default async function PicksPage({
@@ -49,45 +40,7 @@ export default async function PicksPage({
           }
         />
       ) : picks.length > 0 ? (
-        <TableShell>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-14">Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {picks.map((pick) => (
-                <TableRow key={pick.id}>
-                  <TableCell>
-                    {pick.image_url ? (
-                      <CatalogImage src={pick.image_url} alt="" className="size-10" />
-                    ) : (
-                      <div className="size-10 rounded-lg border border-dashed" />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/picks/${pick.id}`} className="font-medium hover:underline">
-                      {pick.name}
-                    </Link>
-                    {pick.sub_text ? <p className="text-xs text-muted-foreground">{pick.sub_text}</p> : null}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {(pick.tags ?? []).join(", ") || "—"}
-                  </TableCell>
-                  <TableCell>{pick.starting_price != null ? naira(pick.starting_price) : "—"}</TableCell>
-                  <TableCell>
-                    <StatusBadge value={pick.is_active ? "active" : "inactive"} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableShell>
+        <PicksBulkTable initial={picks} />
       ) : null}
     </div>
   );

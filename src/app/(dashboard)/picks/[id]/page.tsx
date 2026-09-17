@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminAuthed } from "@/lib/auth";
-import { naira } from "@/lib/money";
+import { nairaFromKobo } from "@/lib/money";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,7 +74,7 @@ export default async function PickViewPage({
                 { label: "Subtitle", value: pick.sub_text?.trim() || "—" },
                 {
                   label: "Starting price",
-                  value: pick.starting_price != null ? naira(pick.starting_price) : "—",
+                  value: pick.starting_price != null ? nairaFromKobo(pick.starting_price) : "—",
                 },
                 { label: "Description", value: pick.description?.trim() || "—" },
               ]}

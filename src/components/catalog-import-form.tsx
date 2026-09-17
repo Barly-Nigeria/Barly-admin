@@ -86,7 +86,11 @@ export function CatalogImportForm() {
           accept=".csv,text/csv"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
-        <p className="text-xs text-muted-foreground">UTF-8 CSV, up to 100 MB / 100,000 rows. The file uploads directly to storage.</p>
+		<p className="text-xs text-muted-foreground">
+          UTF-8 CSV, up to 100 MB / 100,000 rows. The file uploads directly to storage. The{" "}
+          <code className="text-[0.7rem]">price</code> column is naira majors (e.g. 4500 for ₦4,500); the
+          server stores kobo.
+        </p>
       </div>
       {error ? (
         <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">

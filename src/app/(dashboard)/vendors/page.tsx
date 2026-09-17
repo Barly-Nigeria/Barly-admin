@@ -10,8 +10,8 @@ import {
   DeactivateVendorButton,
   EditVendorForm,
   PayVendorForm,
-  vendorCategoryLabel,
 } from "@/components/vendor-forms";
+import { vendorCategoryLabel } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
