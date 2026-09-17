@@ -10,19 +10,12 @@ import {
   updateVendorAction,
 } from "@/app/actions/vendors";
 import type { AdminBank, AdminVendor } from "@/lib/barly-api";
+import { VENDOR_CATEGORIES } from "@/lib/labels";
 import { nairaFromKobo } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
-const CATEGORIES = [
-  { id: "spirits", label: "Spirits" },
-  { id: "mixers", label: "Mixers" },
-  { id: "logistics", label: "Logistics" },
-  { id: "glassware", label: "Glassware" },
-  { id: "other", label: "Other" },
-] as const;
 
 const selectClass = "h-8 rounded-lg border bg-background px-2 text-sm";
 
@@ -47,10 +40,6 @@ function Field({
       <Input id={name} name={name} type={type} required={required} defaultValue={defaultValue} />
     </label>
   );
-}
-
-export function vendorCategoryLabel(id: string) {
-  return CATEGORIES.find((c) => c.id === id)?.label ?? id;
 }
 
 function BankFields({
@@ -134,7 +123,7 @@ export function AddVendorForm({ banks }: { banks: AdminBank[] }) {
       <label className="grid gap-1 text-sm">
         <Label htmlFor="category">Category</Label>
         <select id="category" name="category" required className={selectClass} defaultValue="other">
-          {CATEGORIES.map((c) => (
+          {VENDOR_CATEGORIES.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
             </option>
@@ -170,7 +159,7 @@ export function EditVendorForm({ vendor, banks }: { vendor: AdminVendor; banks: 
           className={selectClass}
           defaultValue={vendor.category}
         >
-          {CATEGORIES.map((c) => (
+          {VENDOR_CATEGORIES.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
             </option>

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { adminAuthed } from "@/lib/auth";
-import { naira } from "@/lib/money";
+import { nairaFromKobo } from "@/lib/money";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AssignJoinsForm,
@@ -82,7 +82,7 @@ export default async function ProductEditPage({
       <Card>
         <CardHeader>
           <CardTitle>Variants</CardTitle>
-          <CardDescription>Inventory SKUs. Prices are in naira (same integer the API stores).</CardDescription>
+          <CardDescription>Inventory SKUs. Enter prices in naira; the API stores kobo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <CreateVariantForm productId={product.id} vendors={vendors} />
@@ -93,7 +93,7 @@ export default async function ProductEditPage({
               {product.variants.map((variant) => (
                 <div key={variant.id} className="rounded-lg border p-3">
                   <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{naira(variant.price)}</span>
+                    <span className="text-muted-foreground">{nairaFromKobo(variant.price)}</span>
                     <ConfirmDeleteButton
                       action={deleteVariantAction}
                       id={variant.id}

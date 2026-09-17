@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { replaceOccasionProductsAction, replacePickProductsAction, searchCatalogProducts } from "@/app/actions/catalog";
-import { naira } from "@/lib/money";
+import { nairaFromKobo } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CatalogImage } from "@/components/catalog-chrome";
@@ -143,7 +143,7 @@ function AssignedProductsCard({
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{hit.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {hit.starting_price != null ? naira(hit.starting_price) : "No price"}
+                  {hit.starting_price != null ? nairaFromKobo(hit.starting_price) : "No price"}
                 </p>
               </div>
               <Button type="button" size="sm" disabled={pending} onClick={() => addProduct(hit)}>
@@ -172,7 +172,7 @@ function AssignedProductsCard({
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <StatusBadge value={product.is_active ? "active" : "inactive"} />
                   <span className="text-xs text-muted-foreground">
-                    {product.starting_price != null ? naira(product.starting_price) : "—"}
+                    {product.starting_price != null ? nairaFromKobo(product.starting_price) : "—"}
                   </span>
                 </div>
               </div>

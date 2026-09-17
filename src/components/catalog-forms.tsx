@@ -32,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { koboToNairaInput } from "@/lib/money";
 import type {
   AdminVendor,
   CatalogAddOn,
@@ -266,8 +267,8 @@ export function EditAddOnForm({ addOn, vendors = [] }: { addOn: CatalogAddOn; ve
       <input type="hidden" name="id" value={addOn.id} />
       <Field name="name" label="Name" defaultValue={addOn.name} required />
       <Field name="slug" label="Slug" defaultValue={addOn.slug} />
-      <Field name="price" label="Price (NGN)" type="number" defaultValue={String(addOn.price)} />
-      <Field name="cost_price" label="Cost (NGN)" type="number" defaultValue={String(addOn.cost_price ?? 0)} />
+      <Field name="price" label="Price (NGN)" type="number" defaultValue={koboToNairaInput(addOn.price)} />
+      <Field name="cost_price" label="Cost (NGN)" type="number" defaultValue={koboToNairaInput(addOn.cost_price)} />
       <Field name="stock_quantity" label="Stock" type="number" defaultValue={String(addOn.stock_quantity)} />
       <VendorSelect vendors={vendors} defaultValue={addOn.vendor_id ?? undefined} />
       <CatalogImageField name="image_url" inputId="add-on-image" initialUrl={addOn.image_url} />
@@ -359,8 +360,8 @@ export function EditVariantRow({
       <Field name="sku" label="SKU" defaultValue={variant.sku} />
       <Field name="attribute_name" label="Attribute" defaultValue={variant.attribute_name} />
       <Field name="attribute_value" label="Value" defaultValue={variant.attribute_value} />
-      <Field name="price" label="Price" type="number" defaultValue={String(variant.price)} />
-      <Field name="cost_price" label="Cost" type="number" defaultValue={String(variant.cost_price ?? 0)} />
+      <Field name="price" label="Price" type="number" defaultValue={koboToNairaInput(variant.price)} />
+      <Field name="cost_price" label="Cost" type="number" defaultValue={koboToNairaInput(variant.cost_price)} />
       <Field name="stock_quantity" label="Stock" type="number" defaultValue={String(variant.stock_quantity)} />
       <Field name="weight_kg" label="Kg" type="number" step="0.01" defaultValue={String(variant.weight_kg)} />
       <VendorSelect vendors={vendors} defaultValue={variant.vendor_id ?? undefined} />
@@ -534,7 +535,7 @@ export function EditPickForm({ pick }: { pick: CatalogPick }) {
         name="starting_price"
         label="Starting price (NGN)"
         type="number"
-        defaultValue={pick.starting_price != null ? String(pick.starting_price) : ""}
+        defaultValue={pick.starting_price != null ? koboToNairaInput(pick.starting_price) : ""}
       />
       <Field name="tags" label="Tags" defaultValue={(pick.tags ?? []).join(", ")} />
       <Check name="is_active" label="Active" defaultChecked={pick.is_active} />

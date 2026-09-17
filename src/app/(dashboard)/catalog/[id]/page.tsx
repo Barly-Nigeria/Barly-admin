@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminAuthed } from "@/lib/auth";
-import { naira } from "@/lib/money";
+import { nairaFromKobo } from "@/lib/money";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,7 +112,7 @@ export default async function ProductViewPage({
               { label: "Category", value: product.category?.name ?? "—" },
               {
                 label: "From",
-                value: product.starting_price != null ? naira(product.starting_price) : "—",
+                value: product.starting_price != null ? nairaFromKobo(product.starting_price) : "—",
               },
               { label: "Description", value: product.description?.trim() || "—" },
             ]}
@@ -123,7 +123,7 @@ export default async function ProductViewPage({
       <Card>
         <CardHeader>
           <CardTitle>Variants</CardTitle>
-          <CardDescription>Inventory SKUs. Prices are in naira.</CardDescription>
+          <CardDescription>Inventory SKUs. Enter and display prices in naira; the API stores kobo.</CardDescription>
         </CardHeader>
         <CardContent>
           {product.variants.length === 0 ? (
@@ -148,7 +148,7 @@ export default async function ProductViewPage({
                       <TableCell>
                         {variant.attribute_name}: {variant.attribute_value}
                       </TableCell>
-                      <TableCell>{naira(variant.price)}</TableCell>
+                      <TableCell>{nairaFromKobo(variant.price)}</TableCell>
                       <TableCell>{variant.stock_quantity}</TableCell>
                       <TableCell>{variant.weight_kg ? `${variant.weight_kg} kg` : "—"}</TableCell>
                       <TableCell>

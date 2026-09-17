@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminAuthed } from "@/lib/auth";
-import { naira } from "@/lib/money";
+import { nairaFromKobo } from "@/lib/money";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +71,7 @@ export default async function AddOnViewPage({
           <CatalogImage src={addOn.image_url} alt={addOn.name} />
           <MetaList
             items={[
-              { label: "Price", value: naira(addOn.price) },
+              { label: "Price", value: nairaFromKobo(addOn.price) },
               { label: "Stock", value: String(addOn.stock_quantity) },
               { label: "Description", value: addOn.description?.trim() || "—" },
             ]}

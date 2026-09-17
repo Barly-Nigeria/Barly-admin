@@ -22,3 +22,15 @@ export const DELIVERY_STATUSES = [
   { id: "cancelled", label: "Cancelled" },
   { id: "booking_failed", label: "Booking failed" },
 ] as const;
+
+export const VENDOR_CATEGORIES = [
+  { id: "spirits", label: "Spirits" },
+  { id: "mixers", label: "Mixers" },
+  { id: "logistics", label: "Logistics" },
+  { id: "glassware", label: "Glassware" },
+  { id: "other", label: "Other" },
+] as const;
+
+export function vendorCategoryLabel(id: string) {
+  return VENDOR_CATEGORIES.find((c) => c.id === id)?.label ?? id;
+}

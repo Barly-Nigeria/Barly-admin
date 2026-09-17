@@ -24,7 +24,7 @@ export default async function NewAddOnPage({
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Details</CardTitle>
-          <CardDescription>Price is in naira (same integer the API stores).</CardDescription>
+          <CardDescription>Enter price in naira; the API stores kobo.</CardDescription>
         </CardHeader>
         <CardContent>
           <CreateAddOnForm vendors={vendors} />
